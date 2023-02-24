@@ -1,0 +1,120 @@
+﻿<Window x:Class="OneTrackToXTracks_SplitterAudio.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:OneTrackToXTracks_SplitterAudio"
+        
+                xmlns:local2="clr-namespace:PanAndZoom"
+
+        
+        mc:Ignorable="d"
+        Title="OneTrackToXTracks" Height="800" Width="1500"
+        Loaded="Window_Loaded"
+        >
+    <Grid Margin="5">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!--Artiste, Album, fichier source, dossier de destination-->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                </Grid.RowDefinitions>
+
+                <Label Grid.Row="0" Grid.Column="0" Content="Author"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
+                <Label Grid.Row="1" Grid.Column="0" Content="Album"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
+                <Label Grid.Row="2" Grid.Column="0" Content="Source file" HorizontalAlignment="Left"  Height="33" VerticalAlignment="Top" />
+                <Label Grid.Row="3" Grid.Column="0" Content="Destination folder"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
+
+                <TextBox Grid.Row="0" Grid.Column="1" x:Name="author" Height="23" VerticalAlignment="Center" />
+                <TextBox Grid.Row="1" Grid.Column="1" x:Name="album" Height="23" VerticalAlignment="Center" />
+                <TextBox Grid.Row="2" Grid.Column="1" x:Name="file" Height="23" VerticalAlignment="Center" />
+                <TextBox Grid.Row="3" Grid.Column="1" x:Name="folder" Height="23" VerticalAlignment="Center" />
+
+                <Button Grid.Row="2" Grid.Column="2" Height="30" Width="30" Margin="5,0" Click="SelectFile_btn_Click" Content="Select file in" ToolTip="Select file in"/>
+                <Button Grid.Row="3" Grid.Column="2" Height="30" Width="30" Margin="5,0" Click="SelectFolder_btn_Click" Content="Select folder out" ToolTip="Select folder out"/>
+
+                <!--<Image Grid.Row="2" Grid.Column="2" Height="30" Width="30" Margin="5,0" MouseDown="SelectFile_Click" Source="/Resources/file.png"/>
+                <Image Grid.Row="3" Grid.Column="2" Height="30" Width="30" Margin="5,0" MouseDown="SelectFolder_Click" Source="/Resources/folder.png"/>-->
+            </Grid>
+
+            <StackPanel Grid.Column="1">
+                <Button Margin="5" Height="50" Width="50" Click="PreProcess_btn_Click" Content="PreProcess" />
+                <Button Margin="5" Height="50" Width="50" Click="Go_btn_Click" Content="GO" IsEnabled="{Binding _ready_to_Process}" />
+            </StackPanel>
+
+            <!--<Image Grid.Column="1" Margin="5" Height="50" Width="50" MouseDown="Go_Click">
+                <Image.Source>
+                    <BitmapImage UriSource="/Resources/Lecture.png" />
+                </Image.Source>
+            </Image>
+            <Image Grid.Column="1" Margin="5" Height="50" Width="50" x:Name="Computing" Visibility="Hidden">
+                <Image.Source>
+                    <BitmapImage UriSource="/Resources/Stop.png" />
+                </Image.Source>
+            </Image>-->
+
+
+
+        </Grid>
+
+        <!--Texte avec durée, pistes-->
+        <Grid Grid.Row="1" >
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" Grid.Row="0" Text="Texte" />
+            <TextBox Grid.Column="0" Grid.Row="1" x:Name="txt" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"  />
+
+            <TextBlock Grid.Column="2" Grid.Row="0" Text="Peaks and Voids" />
+            <Grid Grid.Column="2" Grid.Row="1" >
+                <local2:ZoomBorder x:Name="zoomBorder" ClipToBounds="True" Background="Gray">
+                    <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox">
+                        <Canvas x:Name="rectangles" ClipToBounds="True" Height="1" Width="1"/>
+                    </Viewbox>
+                </local2:ZoomBorder>
+            </Grid>
+
+            <Menu Grid.Column="4" Grid.Row="0" >
+                <MenuItem Header="Transitions detection"/>
+                <MenuItem Header="Del" Click="Blanc_selected_delete"/>
+            </Menu>
+
+            <ListBox Grid.Column="4" Grid.Row="1" x:Name="lbox_blanc" SelectionChanged="lbox_blanc_SelectionChanged" />
+
+            <TextBlock Grid.Column="6" Grid.Row="0" Text="Pistes" />
+            <ListBox Grid.Column="6" Grid.Row="1" x:Name="lbox" SelectionChanged="lbox_SelectionChanged" />
+        </Grid>
+
+    </Grid>
+</Window>

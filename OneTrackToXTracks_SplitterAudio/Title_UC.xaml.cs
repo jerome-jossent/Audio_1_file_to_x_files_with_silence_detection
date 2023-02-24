@@ -15,9 +15,6 @@ using System.Windows.Shapes;
 
 namespace OneTrackToXTracks_SplitterAudio
 {
-    /// <summary>
-    /// Logique d'interaction pour Titre_UC.xaml
-    /// </summary>
     public partial class Title_UC : UserControl
     {
         public Title title;
@@ -32,15 +29,18 @@ namespace OneTrackToXTracks_SplitterAudio
             this.title = title;
             title.uc = this;
 
-            _title.Text = title.ToString();
-            _title.Foreground = title.brush;
+            _grid.Background = title.brush;
+            _index.Text = title.index.ToString("00");
 
             _deb.Value = title.start;
             if (title.start == TimeSpan.Zero)
                 _deb.Value = TimeSpan.Zero;
             _fin.Value = title.end;
 
-            _index.Text = "[" + title.index.ToString("00") + "]";
+            _author.Text = title.author;
+            _album.Text = title.album;
+            _duree.Text = title.totalTime.ToString("mm\\:ss");                       
+            _fileName.Text = title.fileName;
         }
     }
 }

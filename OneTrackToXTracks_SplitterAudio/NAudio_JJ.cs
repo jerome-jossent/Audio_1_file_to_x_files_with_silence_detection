@@ -115,10 +115,15 @@ namespace NAudio_JJ
             {
                 _fin = value;
                 if (value != null)
+                {
                     duree = (double)value - debut;
+                    milieu = ((double)value + debut) / 2;
+                }
             }
         }
         double? _fin;
+
+        public double milieu;
         public double duree;
         internal int index;
 
@@ -130,7 +135,8 @@ namespace NAudio_JJ
 
         public override string ToString()
         {
-            return $"[{index:00}] " + TimeSpan.FromSeconds(debut).ToString("G") + "   →   " + TimeSpan.FromSeconds((double)fin).ToString("G");
+            return $"[{index:00}] " + TimeSpan.FromSeconds(debut).ToString("hh\\:mm\\:ss") +" ("+ duree.ToString("0.00") + "s)";
+            //return $"[{index:00}] " + TimeSpan.FromSeconds(debut).ToString("G") + "   →   " + TimeSpan.FromSeconds((double)fin).ToString("G");
         }
         
         public static List<Blanc> Get_Blancs(List<Peak> peaks, double sensibility, double blanc_dureemini_seconde = 0)

@@ -6,9 +6,12 @@
              xmlns:local="clr-namespace:OneTrackToXTracks_SplitterAudio"
              xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
              mc:Ignorable="d" 
-             d:DesignHeight="30" d:DesignWidth="400">
-    <Grid>
+             d:DesignHeight="20" d:DesignWidth="500">
+    <Grid x:Name="_grid">
         <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="auto"/>
+            <ColumnDefinition Width="auto"/>
+            <ColumnDefinition Width="auto"/>
             <ColumnDefinition Width="auto"/>
             <ColumnDefinition Width="auto"/>
             <ColumnDefinition Width="auto"/>
@@ -16,14 +19,13 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Column="0" x:Name="_index" Text="[00]" Margin="3" VerticalAlignment="Center"/>
-        
+        <TextBlock Grid.Column="0" x:Name="_index" Margin="3,0" Height="20" Text="Index" VerticalAlignment="Center"/>
         <xctk:TimeSpanUpDown Grid.Column="1" x:Name="_deb" Width="95" ShowDays="False" CurrentDateTimePart="Millisecond" />
-        
         <TextBlock Grid.Column="2" Text="→" Margin="3" VerticalAlignment="Center"/>
-
         <xctk:TimeSpanUpDown Grid.Column="3" x:Name="_fin" Width="95" ShowDays="False" CurrentDateTimePart="Millisecond"/>
-
-        <TextBlock Grid.Column="4" x:Name="_title" Margin="3" Text="TITLE" VerticalAlignment="Center"/>
+        <TextBox Grid.Column="4" x:Name="_author" Margin="3,0" Height="20" Text="Auteur" VerticalAlignment="Center"/>
+        <TextBox Grid.Column="5" x:Name="_album" Margin="3,0" Height="20" Text="Album" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="6" x:Name="_duree" Margin="3,0" Height="20" Text="Duree" VerticalAlignment="Center"/>
+        <TextBox Grid.Column="7" x:Name="_fileName" Margin="3,0" Height="20" Text="FileName" VerticalAlignment="Center"/>
     </Grid>
 </UserControl>

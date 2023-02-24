@@ -84,13 +84,13 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="auto" MinWidth="300"/>
                 <ColumnDefinition Width="5"/>
                 <ColumnDefinition Width="100"/>
                 <ColumnDefinition Width="5"/>
-                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="auto" MinWidth="150"/>
                 <ColumnDefinition Width="5"/>
-                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="auto" MinWidth="300"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock Grid.Column="0" Grid.Row="0" Text="Texte" />
@@ -104,16 +104,36 @@
                     </Viewbox>
                 </local2:ZoomBorder>
             </Grid>
+            <GridSplitter Grid.Column="3" Grid.RowSpan="2"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch"
+              ShowsPreview="True"
+              />
 
             <Menu Grid.Column="4" Grid.Row="0" >
                 <MenuItem Header="Transitions detection"/>
                 <MenuItem Header="Del" Click="Blanc_selected_delete"/>
             </Menu>
 
-            <ListBox Grid.Column="4" Grid.Row="1" x:Name="lbox_blanc" SelectionChanged="lbox_blanc_SelectionChanged" />
+            <ListBox Grid.Column="4" Grid.Row="1" x:Name="lbox_blanc" SelectionChanged="lbox_blanc_SelectionChanged">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Height" Value="22"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+            </ListBox>
 
             <TextBlock Grid.Column="6" Grid.Row="0" Text="Pistes" />
-            <ListBox Grid.Column="6" Grid.Row="1" x:Name="lbox" SelectionChanged="lbox_SelectionChanged" />
+            <ListBox Grid.Column="6" Grid.Row="1" x:Name="lbox" SelectionChanged="lbox_SelectionChanged">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Height" Value="22"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+            </ListBox>
+            
         </Grid>
 
     </Grid>

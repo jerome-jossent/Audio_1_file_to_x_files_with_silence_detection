@@ -33,7 +33,14 @@ namespace OneTrackToXTracks_SplitterAudio
         }
 
         public TimeSpan start;
-        public TimeSpan end;
+        public TimeSpan end
+        {
+            get { return _end; }
+            set { _end = value;
+                totalTime = end - start;
+            }
+        }
+        TimeSpan _end;
 
         public TimeSpan totalTime;
         public string fileName;
@@ -42,15 +49,15 @@ namespace OneTrackToXTracks_SplitterAudio
         internal SolidColorBrush brush;
         internal Title_UC uc;
 
-        public Title(string chaine)
+        public Title(TimeSpan start, TimeSpan end)
         {
-            //0:00:00  Progressive Funk  ( Impact Inc. - Vectorball )\r\n
+            this.start = start;
+            this.end = end;
+        }
 
-            int pos_prem_espace = chaine.IndexOf(' ');
-
-            string temps_s = chaine.Substring(0, pos_prem_espace);
-            start = TimeSpan.Parse(temps_s);
-            titleraw = chaine.Substring(pos_prem_espace).Trim();
+        public void SetTitle(string chaine)
+        {
+            titleraw = chaine;
         }
 
         public override string ToString()

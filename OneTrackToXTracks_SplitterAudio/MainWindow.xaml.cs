@@ -1,38 +1,21 @@
-﻿using Microsoft.VisualBasic.Devices;
-using NAudio.Dmo.Effect;
-using NAudio.Dsp;
-using NAudio.Wave;
-using NAudio.WaveFormRenderer;
-using PanAndZoom;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Configuration.Provider;
-using System.Drawing;
 using System.IO;
-using System.IO.Pipes;
-using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Forms;
-using System.Windows.Ink;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
-using System.Xml.Linq;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TreeView;
 
+using PanAndZoom;
 using NAudio_JJ;
+using System.Reflection;
+using System.Diagnostics;
+using System.Threading;
+using TagLib;
 
 namespace OneTrackToXTracks_SplitterAudio
 {
@@ -74,6 +57,7 @@ namespace OneTrackToXTracks_SplitterAudio
             INITS();
             GetInfo();
             ZoomBorder.SampleEvent += ZoomBorder_SampleEvent;
+            PreProcess();
         }
 
         void INITS()
@@ -81,7 +65,7 @@ namespace OneTrackToXTracks_SplitterAudio
             _Title = Title;
             file.Text = @"D:\Videos\Download Videos\MOBY - Amiga Days (Remasters Vol.1) [[FULL ALBUM]].mp3";
             folder.Text = @"D:\Videos\Download Videos\TEST";
-            txt.Text = "0:00:00  Progressive Funk  ( Impact Inc. - Vectorball )\r\n0:11:43  Papoornoo2 ( Apology - Demodisk 1 )\r\n0:15:51  The Last Knight ( Alcatraz - Megademo IV )\r\n0:24:39  Dragonsfunk ( Angels - Copper Master )   \r\n0:30:33  Pelforth Blues ( Alcatraz - Music Disk 1 )\r\n0:36:54  The Knight is Back ( Alcatraz - Music Disk 1 ) \r\n0:47:16  Knulla Kuk (Quartex - Substance )\r\n0:55:17  Let there be Funk ( Dreamdealers - Tales Of A Dream )\r\n1:01:26  Groovy Thing ( Dreamdealers - Innervision )\r\n1:05:56  88, Funky Avenue \r\n1:09:08  P.A.T.A.O.P.A.\r\n1:16:52  Drink My Pain Away ( The Special Brothers - Live #1 )\r\n1:21:22  Kanyenamaryamalabar \r\n1:30:00  Cortouchka !\r\n1:36:06  Heads Up ( Alliance Design/DRD - Arkham Asylum )\r\n1:39:43  Raging Fire ( Dreamdealers - Raging Fire )\r\n1:40:47  Livin' Insanity ( Sanity - Arte )\r\n1:43:54  Elekfunk ( Sanity - Arte )\r\n1:47:13  Mobyle ( Sanity - Arte )\r\n1:49:51  More Than Music ( Alcatraz - More Than Music )";
+            txt.Text = "Progressive Funk (Impact Inc. - Vectorball)\r\nPapoornoo2 (Apology - Demodisk 1)\r\nThe Last Knight (Alcatraz - Megademo IV)\r\nDragonsfunk (Angels - Copper Master)\r\nPelforth Blues (Alcatraz - Music Disk 1)\r\nThe Knight is Back (Alcatraz - Music Disk 1)\r\nKnulla Kuk (Quartex - Substance)\r\nLet there be Funk (Dreamdealers - Tales Of A Dream \r\nGroovy Thing (Dreamdealers - Innervision)\r\n88, Funky Avenue\r\nP.A.T.A.O.P.A.\r\nDrink My Pain Away (The Special Brothers - Live #1)\r\nKanyenamaryamalabar\r\nCortouchka !\r\nHeads Up (Alliance Design/DRD - Arkham Asylum)\r\nRaging Fire (Dreamdealers - Raging Fire)\r\nLivin' Insanity (Sanity - Arte)\r\nElekfunk (Sanity - Arte)\r\nMobyle (Sanity - Arte)\r\nMore Than Music (Alcatraz - More Than Music)";
             author.Text = "MOBY";
         }
 
@@ -104,12 +88,15 @@ namespace OneTrackToXTracks_SplitterAudio
 
         void lbox_blanc_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (e.AddedItems.Count > 0)            
-                Blanc_selected((Blanc)e.AddedItems[0]);            
+            if (e.AddedItems.Count == 0) return;
+
+            Blanc_selected((Blanc)e.AddedItems[0]);
         }
 
         void lbox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (e.AddedItems.Count == 0) return;
+
             Title_UC selection = (Title_UC)e.AddedItems[0];
             Title_selected(selection.title);
         }
@@ -137,46 +124,37 @@ namespace OneTrackToXTracks_SplitterAudio
             totaltime = NAudio_JJ.NAudio_JJ.MusicFileInfo(file.Text);
 
             //get Peaks Amplitude
-            string jsonfile = @"D:\Ma musique\_CHIPTUNE\json.txt";
+            string jsonfile = AppDomain.CurrentDomain.BaseDirectory + @"json.tmp";
             bool usejsoninstead = true;
+            if (!System.IO.File.Exists(jsonfile)) usejsoninstead = false;
+
             if (usejsoninstead)
                 peaks = NAudio_JJ.Peak.Get_Peaks_FromJson(jsonfile);
             else
             {
                 peaks = NAudio_JJ.Peak.Get_Peaks(file.Text);
                 string jsonString = JsonSerializer.Serialize(peaks);
-                File.WriteAllText(jsonfile, jsonString);
+                System.IO.File.WriteAllText(jsonfile, jsonString);
             }
 
             //get blancs
             blancs = NAudio_JJ.Blanc.Get_Blancs(peaks, 0.005, 0.2);
 
             List_Blancs();
+
+            titles = TracksFinder(blancs);
+            List_Titles(titles);
+
             ReDrawGraph();
         }
 
         void PreProcess()
         {
-            //Read text => make a list of titles
-            titles = TitlesMaker(txt.Text);
-            List_Titles(titles);
-
-            #region trim
-            if (false && titles != null)
-            {
-                //set le temps de la première piste
-                titles[0].start = TimeSpan.FromSeconds((double)blancs[0].fin);
-                //set le temps de la dernière piste
-                titles[titles.Count - 1].end = TimeSpan.FromSeconds(blancs[blancs.Count - 1].debut);
-
-                //supprime le premier blanc 
-                blancs.RemoveAt(0);
-                //supprime le dernier blanc 
-                blancs.RemoveAt(blancs.Count - 1);
-            }
-            #endregion
-
             List_Blancs();
+
+            //Read text => make a list of titles
+            TitlesMaker(txt.Text, titles);
+            List_Titles(titles);
 
             //représentations graphiques
             ReDrawGraph();
@@ -187,7 +165,7 @@ namespace OneTrackToXTracks_SplitterAudio
         {
             rectangles.Children.Clear();
             Draw_Titles();
-            Draw_Peaks(System.Windows.Media.Colors.Yellow);
+            Draw_Peaks(System.Windows.Media.Color.FromRgb(40, 40, 40));
             Draw_Blancs(System.Windows.Media.Colors.White);
         }
 
@@ -195,34 +173,111 @@ namespace OneTrackToXTracks_SplitterAudio
         {
             //Extraction des titres du fichier original
             foreach (Title titre in titles)
+            {
+                //create file
                 NAudio_JJ.NAudio_JJ.AudioExtractor(file.Text,
                     titre.fullFileName,
                     titre.start.TotalSeconds,
                     titre.end.TotalSeconds);
+
+                //create ID3 Tag
+
+
+                FileStream fileStream = new FileStream(titre.fullFileName, new FileStreamOptions() { Access = FileAccess.ReadWrite });
+                var tagFile = TagLib.File.Create(new StreamFileAbstraction(titre.fullFileName, fileStream, fileStream));
+
+                var tagsv2 = tagFile.GetTag(TagTypes.Id3v2);
+                tagsv2.Album = titre.album;
+                tagsv2.Artists = new string[] { titre.author };
+                tagsv2.AlbumArtists = new string[] { titre.author };
+                tagsv2.Track = (uint)titre.index;
+                tagsv2.Title = titre.titleraw;
+                tagsv2.Genres = new string[] { };
+
+
+                var tagsv1 = tagFile.GetTag(TagTypes.Id3v1);
+                tagsv1.Album = titre.album;
+                tagsv1.Artists = new string[] { titre.author };
+                tagsv1.AlbumArtists = new string[] { titre.author };
+                tagsv1.Track = (uint)titre.index;
+                tagsv1.Title = titre.titleraw;
+                tagsv1.Genres = new string[] { };
+
+                tagFile.Save();
+                //Id3Tag tag = new Id3Tag();// mp3.GetTag(Id3TagFamily.Version2X);
+
+                //using (var mp3 = new Mp3File(titre.fullFileName, Mp3Permissions.ReadWrite))
+                //{
+                //    mp3.WriteTag(tag, WriteConflictAction.Replace);
+                //}
+            }
+
+            //open folder
+            OpenFolder(folder.Text);
         }
 
-        List<Title> TitlesMaker(string text)
+        List<Title> TracksFinder(List<Blanc> blancs)
+        {
+            List<Title> titles = new List<Title>();
+
+            double temps_mini_sec = 5;
+
+            for (int i = 0; i < blancs.Count - 1; i++)
+            {
+                Blanc blanc = blancs[i];
+
+                //first title
+                if (i == 0)
+                {
+                    //est ce que le 
+                    if (blanc.debut > temps_mini_sec)
+                    {
+                        titles.Add(new Title(TimeSpan.Zero, TimeSpan.FromSeconds(blanc.debut))
+                        {
+                            index = titles.Count + 1,
+                            brush = new SolidColorBrush(GetNextColor(titles.Count + 1)),
+                            album = album.Text,
+                            author = author.Text,
+                        });
+                    }
+                }
+                titles.Add(new Title(TimeSpan.FromSeconds((double)blanc.fin), TimeSpan.FromSeconds(blancs[i + 1].debut))
+                {
+                    index = titles.Count + 1,
+                    brush = new SolidColorBrush(GetNextColor(titles.Count + 1)),
+                    album = album.Text,
+                    author = author.Text,
+                });
+
+            }
+            return titles;
+        }
+
+        void TitlesMaker(string text, List<Title> titles)
         {
             text = text.Replace("\r\n", "\n");
             string[] lignes = text.Split("\n");
-            List<Title> titles = new List<Title>();
 
             //texte → titre
             for (int i = 0; i < lignes.Length; i++)
             {
                 string ligne = lignes[i];
-                Title title = new Title(ligne); // titre et temps début
-                title.index = i + 1;
-                title.author = author.Text;
-                title.album = album.Text;
-                title.brush = new System.Windows.Media.SolidColorBrush(GetNextColor(i));
+
+                Title title = titles[i];
+                title.SetTitle(ligne);
 
                 string t = "";
                 if (title.author != null && title.author != "")
                     t += title.author + " - ";
 
                 if (title.album != null && title.album != "")
+                    if (album.Text != null && album.Text != "")
+                        title.album = album.Text;
+
+                if (title.album != null && title.album != "")
                     t += title.album + " - ";
+
+                t += title.index.ToString("00") + " - ";
 
                 t += title.titleraw;
 
@@ -236,28 +291,10 @@ namespace OneTrackToXTracks_SplitterAudio
                 t = t.Replace(">", "_");
                 t = t.Replace("|", "_");
 
-                title.fileName = t;
+                title.fileName = t + ".mp3";
 
-                title.fullFileName = folder.Text + "\\" + title.fileName + ".mp3";
-
-                titles.Add(title);
+                title.fullFileName = folder.Text + "\\" + title.fileName;
             }
-
-            //temps 
-            for (int i = 0; i < titles.Count; i++)
-            {
-                Title titre = titles[i];
-                if (i < titles.Count - 1)
-                    //premiers titres
-                    titre.end = titles[i + 1].start;
-                else
-                    //dernier titre
-                    titre.end = totaltime;
-
-                titre.totalTime = titre.end - titre.start;
-            }
-
-            return titles;
         }
 
         #region To UI
@@ -280,7 +317,7 @@ namespace OneTrackToXTracks_SplitterAudio
             lbox_blanc.Items.Clear();
             for (int i = 0; i < blancs.Count; i++)
             {
-                blancs[i].index = i;
+                blancs[i].index = i + 1;
                 lbox_blanc.Items.Add(blancs[i]);
             }
         }
@@ -422,6 +459,21 @@ namespace OneTrackToXTracks_SplitterAudio
             while (index > colors.Count - 1) { index -= colors.Count; }
             return colors[index];
         }
+
+        void OpenFolder(string folderPath)
+        {
+            if (Directory.Exists(folderPath))
+            {
+                ProcessStartInfo startInfo = new ProcessStartInfo
+                {
+                    Arguments = folderPath,
+                    FileName = "explorer.exe"
+                };
+
+                System.Diagnostics.Process.Start(startInfo);
+            }
+        }
+
         #endregion
     }
 }

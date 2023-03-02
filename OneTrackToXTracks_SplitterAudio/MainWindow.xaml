@@ -39,8 +39,8 @@
                     <RowDefinition Height="auto"/>
                     <RowDefinition Height="auto"/>
                     <RowDefinition Height="auto"/>
-                    <RowDefinition Height="auto"/>
                 </Grid.RowDefinitions>
+                
                 <Label Grid.Row="0" Grid.Column="0" Content="Source file" HorizontalAlignment="Left"  Height="33" VerticalAlignment="Top" />
                 <Button Grid.Row="0" Grid.Column="1"  Margin="5" Click="SelectFile_btn_Click" Content="Select file in" ToolTip="Select file in"/>
                 <TextBox Grid.Row="0" Grid.Column="2" x:Name="file" Height="23" VerticalAlignment="Center" VerticalContentAlignment="Center" />
@@ -68,15 +68,6 @@
                 <!--<Image Grid.Row="2" Grid.Column="2" Height="30" Width="30" Margin="5,0" MouseDown="SelectFile_Click" Source="/Resources/file.png"/>
                 <Image Grid.Row="3" Grid.Column="2" Height="30" Width="30" Margin="5,0" MouseDown="SelectFolder_Click" Source="/Resources/folder.png"/>-->
 
-                <Grid Grid.Row="5"  Grid.ColumnSpan="3" >
-                    <GroupBox Header="Detection">
-                        <StackPanel Orientation="Vertical">
-                            <RadioButton Margin="5" x:Name="mode_rb_auto" Content="Automatique" IsChecked="True"/>
-                            <RadioButton Margin="5" x:Name="mode_rb_text" Content="From texte &quot;00:01:23 title&quot; → time, space, title (eventualy with spaces)"/>
-                        </StackPanel>
-                    </GroupBox>
-
-                </Grid>
 
             </Grid>
 
@@ -95,9 +86,6 @@
                     <BitmapImage UriSource="/Resources/Stop.png" />
                 </Image.Source>
             </Image>-->
-
-
-
         </Grid>
 
         <!--Texte avec durée, pistes-->
@@ -120,7 +108,7 @@
             <TextBox Grid.Column="0" Grid.Row="1" x:Name="txt" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"  />
 
             <TextBlock Grid.Column="2" Grid.Row="0" Text="Peaks and Silences" />
-            <Grid Grid.Column="2" Grid.Row="1" >
+            <Grid Grid.Column="2" Grid.Row="1" SizeChanged="GridZoom_SizeChanged" >
                 <local2:ZoomBorder x:Name="zoomBorder" ClipToBounds="True" Background="Gray">
                     <Grid>
                         <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox">
@@ -140,11 +128,16 @@
                 <MenuItem Header="Del" Click="Silence_selected_delete"/>
             </Menu>
 
-            <ListBox Grid.Column="4" Grid.Row="1" x:Name="lbox_silence" SelectionChanged="lbox_silence_SelectionChanged">
+            <ListBox Grid.Column="4" Grid.Row="1" x:Name="lbox_silence" SelectionChanged="lbox_silence_SelectionChanged" >
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="Padding" Value="0"/>
                         <Setter Property="Height" Value="22"/>
+                        <!--<Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="IsSelected" Value="True"/>
+                            </Trigger>
+                        </Style.Triggers>-->
                     </Style>
                 </ListBox.ItemContainerStyle>
             </ListBox>

@@ -7,7 +7,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="10" d:DesignWidth="10">
     <Viewbox Stretch="Fill">
-        <Canvas Height="50" Width="50" Background="Transparent">
+        <Canvas Height="50" Width="50" Background="Transparent" MouseEnter="_eli_MouseEnter" MouseLeave="_eli_MouseLeave" >
             <Ellipse x:Name="_eli" Stroke="Black" Width="50" Height="50" StrokeThickness="1" Fill="AliceBlue" />
             <TextBlock x:Name="_tbk" Text="99" FontSize="30" Width="50" Height="50" Padding="3" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" />
         </Canvas>

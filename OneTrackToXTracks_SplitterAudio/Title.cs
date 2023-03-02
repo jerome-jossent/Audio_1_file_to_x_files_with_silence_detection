@@ -55,9 +55,34 @@ namespace OneTrackToXTracks_SplitterAudio
             this.end = end;
         }
 
-        public void SetTitle(string chaine)
+        public void SetTitle(string chaine, string folder)
         {
             titleraw = chaine;
+
+            string t = "";
+            if (author != null && author != "")
+                t += author + " - ";
+
+            if (album != null && album != "")
+                t += album + " - ";
+
+            t += index.ToString("00") + " - ";
+
+            t += titleraw;
+
+            t = t.Replace("\\", "_");
+            t = t.Replace("/", "_");
+            t = t.Replace(":", "_");
+            t = t.Replace("*", "_");
+            t = t.Replace("?", "_");
+            t = t.Replace("\"", "_");
+            t = t.Replace("<", "_");
+            t = t.Replace(">", "_");
+            t = t.Replace("|", "_");
+
+            fileName = t + ".mp3";
+
+            fullFileName = folder + "\\" + fileName;
         }
 
         public override string ToString()

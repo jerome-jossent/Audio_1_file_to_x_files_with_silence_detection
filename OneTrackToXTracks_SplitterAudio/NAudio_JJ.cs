@@ -30,6 +30,18 @@ namespace NAudio_JJ
             return peaks;
         }
 
+
+        public delegate void PeakAnalysingHandler(object sender, PeakAnalysingEventArgs e);
+
+        // Declare the event.
+        public static event PeakAnalysingHandler peakAnalysingEvent;
+
+        public class PeakAnalysingEventArgs
+        {
+            public PeakAnalysingEventArgs(int val) { Val = val; }
+            public int Val { get; }
+        }
+
         public static List<Peak> Get_Peaks(string path, int samplessize = 1000)
         {
             List<Peak> peaks = new List<Peak>();
@@ -56,18 +68,14 @@ namespace NAudio_JJ
                 amplitude = Math.Abs(currentPeak.Max); // 0 à 1
                 peaks.Add(new Peak(tps, amplitude));
                 tps += pas;
-                //if (progressBar != null)
+                p = (100 * i / iterrations);
+                if (p > p_last)
                 {
-
-                    p = (100 * i / iterrations);
-                    if (p > p_last)
-                    {
-                        p_last = p;
-                        //progressBar.Dispatcher.Invoke(new Action(() => { progressBar.Value = p_last; }));
-                    }
+                    peakAnalysingEvent?.Invoke(null, new PeakAnalysingEventArgs(p));
+                    p_last = p;
                 }
             }
-            //progressBar?.Dispatcher.Invoke(new Action(() => { progressBar.Value = 100; }));
+            peakAnalysingEvent?.Invoke(null, new PeakAnalysingEventArgs(100));
             return peaks;
         }
 

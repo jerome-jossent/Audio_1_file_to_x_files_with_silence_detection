@@ -18,6 +18,7 @@ using System.Threading;
 using TagLib;
 using System.Xml.Linq;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.Windows.Threading;
 
 namespace OneTrackToXTracks_SplitterAudio
 {
@@ -44,12 +45,14 @@ namespace OneTrackToXTracks_SplitterAudio
 
         DATA data;
 
-        Dictionary<Pastille, Silence> silences_pastille;
+        Dictionary<Silence, Pastille> silences_pastille;
+        Dictionary<ListBoxItem, Silence> listitems_silence;
+        Pastille previousPastilleSelected;
         Polygon sound_peaks;
         Polygon sound_silences;
         Polygon silence_selected;
 
-        enum ZLevelOnCanvas { tracks = 0, peaks = 3, silences = 5, pastilles = 10 }
+        public enum ZLevelOnCanvas { tracks = 0, peaks = 3, silences = 5, pastilles = 1000 }
 
         public MainWindow()
         {
@@ -143,6 +146,11 @@ namespace OneTrackToXTracks_SplitterAudio
             DrawOrUpdate_SilencesPastilles();
         }
 
+        void GridZoom_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            DrawOrUpdate_SilencesPastilles();
+        }
+
         void Silence_selected_delete(object sender, RoutedEventArgs e)
         {
             data.silences.Remove((Silence)lbox_silence.SelectedItem);
@@ -171,13 +179,18 @@ namespace OneTrackToXTracks_SplitterAudio
             }
             else
             {
-
+                Peak.peakAnalysingEvent += Peak_peakAnalysingEvent;
                 data.peaks = Peak.Get_Peaks(path);
+                Peak.peakAnalysingEvent -= Peak_peakAnalysingEvent;
                 string jsonString = JsonSerializer.Serialize(data.peaks);
                 System.IO.File.WriteAllText(jsonfile, jsonString);
                 GetInfo_2(data.peaks, ref data.silences, ref data.titles, data.totaltime);
             }
+        }
 
+        void Peak_peakAnalysingEvent(object sender, Peak.PeakAnalysingEventArgs e)
+        {
+            Dispatcher.Invoke(new Action(() => { _progressbar.Value = e.Val; }), DispatcherPriority.Background, null);
         }
 
         void GetInfo_2(List<Peak> peaks, ref List<Silence> silences, ref List<Title> titles, double totaltime_sec)
@@ -213,7 +226,7 @@ namespace OneTrackToXTracks_SplitterAudio
         {
             List_Silences();
             //Read text => make a list of titles
-            TitlesMaker(txt.Text, data.titles);
+            TitlesMaker(txt.Text, data.titles, author.Text, album.Text);
             List_Titles();
 
             //représentations graphiques
@@ -288,9 +301,6 @@ namespace OneTrackToXTracks_SplitterAudio
         static void TracksFinder(List<Silence> silences, ref List<Title> titles)
         {
             titles = new List<Title>();
-
-            double temps_mini_sec = 5;
-
             for (int i = 0; i < silences.Count - 1; i++)
             {
                 Silence silence = silences[i];
@@ -298,30 +308,22 @@ namespace OneTrackToXTracks_SplitterAudio
                 //first title
                 if (i == 0)
                 {
-                    //est ce que le 
-                    if (silence.debut > temps_mini_sec)
+                    titles.Add(new Title(TimeSpan.Zero, TimeSpan.FromSeconds(silence.debut))
                     {
-                        titles.Add(new Title(TimeSpan.Zero, TimeSpan.FromSeconds(silence.debut))
-                        {
-                            index = titles.Count + 1,
-                            brush = new SolidColorBrush(GetNextColor(titles.Count + 1)),
-                            //album = album.Text,
-                            //author = author.Text,
-                        });
-                    }
+                        index = titles.Count + 1,
+                        brush = new SolidColorBrush(GetNextColor(titles.Count + 1))
+                    });
                 }
-                titles.Add(new Title(TimeSpan.FromSeconds((double)silence.fin), TimeSpan.FromSeconds(silences[i + 1].debut))
+                titles.Add(new Title(TimeSpan.FromSeconds((double)silence.fin),
+                                     TimeSpan.FromSeconds(silences[i + 1].debut))
                 {
                     index = titles.Count + 1,
                     brush = new SolidColorBrush(GetNextColor(titles.Count + 1)),
-                    //album = album.Text,
-                    //author = author.Text,
                 });
-
             }
         }
 
-        void TitlesMaker(string text, List<Title> titles)
+        void TitlesMaker(string text, List<Title> titles, string author, string album)
         {
             text = text.Replace("\r\n", "\n");
             string[] lignes = text.Split("\n");
@@ -332,36 +334,38 @@ namespace OneTrackToXTracks_SplitterAudio
                 string ligne = lignes[i];
 
                 Title title = titles[i];
-                title.SetTitle(ligne);
+                title.album = album;
+                title.author = author;
+                title.SetTitle(ligne, folder.Text);
 
-                string t = "";
-                if (title.author != null && title.author != "")
-                    t += title.author + " - ";
+                //string t = "";
+                //if (title.author != null && title.author != "")
+                //    t += title.author + " - ";
 
-                if (title.album != null && title.album != "")
-                    if (album.Text != null && album.Text != "")
-                        title.album = album.Text;
+                //if (title.album != null && title.album != "")
+                //    if (album.Text != null && album.Text != "")
+                //        title.album = album.Text;
 
-                if (title.album != null && title.album != "")
-                    t += title.album + " - ";
+                //if (title.album != null && title.album != "")
+                //    t += title.album + " - ";
 
-                t += title.index.ToString("00") + " - ";
+                //t += title.index.ToString("00") + " - ";
 
-                t += title.titleraw;
+                //t += title.titleraw;
 
-                t = t.Replace("\\", "_");
-                t = t.Replace("/", "_");
-                t = t.Replace(":", "_");
-                t = t.Replace("*", "_");
-                t = t.Replace("?", "_");
-                t = t.Replace("\"", "_");
-                t = t.Replace("<", "_");
-                t = t.Replace(">", "_");
-                t = t.Replace("|", "_");
+                //t = t.Replace("\\", "_");
+                //t = t.Replace("/", "_");
+                //t = t.Replace(":", "_");
+                //t = t.Replace("*", "_");
+                //t = t.Replace("?", "_");
+                //t = t.Replace("\"", "_");
+                //t = t.Replace("<", "_");
+                //t = t.Replace(">", "_");
+                //t = t.Replace("|", "_");
 
-                title.fileName = t + ".mp3";
+                //title.fileName = t + ".mp3";
 
-                title.fullFileName = folder.Text + "\\" + title.fileName;
+                //title.fullFileName = folder.Text + "\\" + title.fileName;
             }
         }
 
@@ -370,23 +374,39 @@ namespace OneTrackToXTracks_SplitterAudio
         {
             for (int i = 0; i < data.titles.Count; i++)
             {
+                Title title = data.titles[i];
                 Title_UC uc = new Title_UC();
-                uc._Link(data.titles[i]);
+                uc._Link(title);
             }
 
             lbox.Items.Clear();
             for (int i = 0; i < data.titles.Count; i++)
-                lbox.Items.Add(data.titles[i]);
+                lbox.Items.Add(data.titles[i].uc);
         }
 
         void List_Silences()
         {
             lbox_silence.Items.Clear();
+            listitems_silence = new Dictionary<ListBoxItem, Silence>();
+
+            ListBoxItem it = null;
             for (int i = 0; i < data.silences.Count; i++)
             {
                 data.silences[i].index = i + 1;
-                lbox_silence.Items.Add(data.silences[i]);
+                it = new ListBoxItem();
+                it.Content = data.silences[i];
+                it.MouseEnter += new System.Windows.Input.MouseEventHandler(SilenceOver);
+                lbox_silence.Items.Add(it);
+                listitems_silence.Add(it, data.silences[i]);
             }
+        }
+
+        private void SilenceOver(object? sender, System.Windows.Input.MouseEventArgs e)
+        {
+            previousPastilleSelected?._FocusLost();
+            ListBoxItem it = (ListBoxItem)sender;
+            previousPastilleSelected = silences_pastille[listitems_silence[it]];
+            previousPastilleSelected._Focus();
         }
 
         void Draw_Titles()
@@ -474,44 +494,53 @@ namespace OneTrackToXTracks_SplitterAudio
 
         void DrawOrUpdate_SilencesPastilles()
         {
+            if (data == null) { return; }
+
             TranslateTransform st = zoomBorder._GetTranslateTransform();
             ScaleTransform sc = zoomBorder._GetScaleTransform();
 
-            if (st != null && sc != null)
+            if (st == null || sc == null)
+                return;
+
+            if (silences_pastille == null)
             {
-                if (silences_pastille == null)
+                silences_pastille = new Dictionary<Silence, Pastille>();
+                foreach (Silence silence in data.silences)
                 {
-                    silences_pastille = new Dictionary<Pastille, Silence>();
-                    foreach (Silence silence in data.silences)
-                    {
-                        Pastille pastille = new Pastille();
-                        pastille.Set(silence.index.ToString("00"), stroke_color: Brushes.Black, fill_color: Brushes.White, stroke_thickness: 1);
-                        rectangles.Children.Add(pastille);
-                        silences_pastille.Add(pastille, silence);
-                    }
+                    Pastille pastille = new Pastille();
+                    pastille.Set(silence.index.ToString("00"),
+                        stroke_color: Brushes.Black,
+                        fill_color: Brushes.White,
+                        stroke_thickness: 1,
+                        silence,
+                        (int)ZLevelOnCanvas.pastilles - silence.index
+                        );
+                    rectangles.Children.Add(pastille);
+                    silences_pastille.Add(silence, pastille);
                 }
+            }
 
-                double fixedwidth_prct = 0.3;
-                double rectangles_W_abs = rectangles.ActualWidth / sc.ScaleX;
-                double rectangles_H_abs = rectangles.ActualHeight / sc.ScaleY;
-                double fixedheight_prct = rectangles.ActualHeight / 10 * fixedwidth_prct * rectangles_W_abs / rectangles_H_abs;// 0.05;
+            double rectangles_W_abs = rectangles.ActualWidth / sc.ScaleX;
+            double rectangles_H_abs = rectangles.ActualHeight / sc.ScaleY;
+            double fixedwidth_prct = 0.03 * zoomBorder.ActualHeight / zoomBorder.ActualWidth;
+            double fixedheight_prct = fixedwidth_prct * zoomBorder.ActualWidth / zoomBorder.ActualHeight;
 
-                //mis à jour du positionnement des pastilles
-                foreach (var item in silences_pastille)
-                {
-                    Pastille pastille = item.Key;
-                    Silence silence = item.Value;
+            //mis à jour du positionnement des pastilles
+            foreach (var item in silences_pastille)
+            {
+                Silence silence = item.Key;
+                Pastille pastille = item.Value;
 
-                    pastille.Width = fixedwidth_prct * rectangles_W_abs;
-                    pastille.Height = fixedheight_prct * rectangles_H_abs / rectangles_W_abs;
+                pastille.Width = rectangles_W_abs * fixedwidth_prct;
+                pastille.Height = rectangles_H_abs * fixedheight_prct;
 
-                    double top = silence.milieu - pastille.Height / 2;
-                    double left = rectangles.Width - pastille.Width;
+                double top = silence.milieu - pastille.Height / 2;
+                double left = rectangles.Width - pastille.Width;
 
-                    System.Windows.Controls.Panel.SetZIndex(pastille, (int)ZLevelOnCanvas.pastilles);
-                    Canvas.SetTop(pastille, top);
-                    Canvas.SetLeft(pastille, left);
-                }
+                //met les nouvelles pastilles derrières les anciennes;
+                System.Windows.Controls.Panel.SetZIndex(pastille, pastille._zindex);
+                Canvas.SetTop(pastille, top);
+                Canvas.SetLeft(pastille, left);
             }
         }
 

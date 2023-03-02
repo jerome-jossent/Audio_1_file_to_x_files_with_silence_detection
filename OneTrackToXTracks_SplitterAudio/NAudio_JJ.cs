@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 
 namespace NAudio_JJ
 {
@@ -21,6 +22,7 @@ namespace NAudio_JJ
             this.temps = temps;
             this.amplitude = amplitude;
         }
+
         public static List<Peak> Get_Peaks_FromJson(string path)
         {
             string json = System.IO.File.ReadAllText(path);
@@ -31,6 +33,8 @@ namespace NAudio_JJ
         public static List<Peak> Get_Peaks(string path, int samplessize = 1000)
         {
             List<Peak> peaks = new List<Peak>();
+
+            peaks = new List<Peak>();
 
             MediaFoundationReader inputStream = new MediaFoundationReader(path);
             WaveStream waveReader = WaveFormatConversionStream.CreatePcmStream(inputStream);
@@ -44,14 +48,26 @@ namespace NAudio_JJ
             double pas = waveReader.TotalTime.TotalSeconds / iterrations;
             double tps = pas / 2;
             double amplitude;
+            int p_last = 0;
+            int p;
             for (int i = 0; i < iterrations; i++)
             {
                 PeakInfo currentPeak = peakProvider.GetNextPeak();
                 amplitude = Math.Abs(currentPeak.Max); // 0 à 1
                 peaks.Add(new Peak(tps, amplitude));
                 tps += pas;
-            }
+                //if (progressBar != null)
+                {
 
+                    p = (100 * i / iterrations);
+                    if (p > p_last)
+                    {
+                        p_last = p;
+                        //progressBar.Dispatcher.Invoke(new Action(() => { progressBar.Value = p_last; }));
+                    }
+                }
+            }
+            //progressBar?.Dispatcher.Invoke(new Action(() => { progressBar.Value = 100; }));
             return peaks;
         }
 
@@ -105,7 +121,7 @@ namespace NAudio_JJ
 
     }
 
-    public class Blanc
+    public class Silence
     {
         public double debut;
         public double? fin
@@ -127,7 +143,7 @@ namespace NAudio_JJ
         public double duree;
         internal int index;
 
-        public Blanc(double debut, double? fin)
+        public Silence(double debut, double? fin)
         {
             this.debut = debut;
             this.fin = fin;
@@ -135,63 +151,63 @@ namespace NAudio_JJ
 
         public override string ToString()
         {
-            return $"[{index:00}] " + TimeSpan.FromSeconds(debut).ToString("hh\\:mm\\:ss") +" ("+ duree.ToString("0.00") + "s)";
+            return $"[{index:00}] " + TimeSpan.FromSeconds(debut).ToString("hh\\:mm\\:ss") + " (" + duree.ToString("0.00") + "s)";
             //return $"[{index:00}] " + TimeSpan.FromSeconds(debut).ToString("G") + "   →   " + TimeSpan.FromSeconds((double)fin).ToString("G");
         }
-        
-        public static List<Blanc> Get_Blancs(List<Peak> peaks, double sensibility, double blanc_dureemini_seconde = 0)
-        {
-            List<Blanc> blancs = new List<Blanc>();
 
-            #region détection de blancs
-            bool newBlanc = true;
+        public static List<Silence> Get_Silences(List<Peak> peaks, double sensibility, double silence_dureemini_seconde = 0)
+        {
+            List<Silence> silences = new List<Silence>();
+
+            #region détection de silences
+            bool newSilence = true;
             for (int i = 0; i < peaks.Count; i++)
             {
                 if (peaks[i].amplitude < sensibility)
                 {
-                    if (newBlanc)
+                    if (newSilence)
                     {
-                        blancs.Add(new Blanc(peaks[i].temps, null));
-                        newBlanc = false;
+                        silences.Add(new Silence(peaks[i].temps, null));
+                        newSilence = false;
                     }
                     else
-                        blancs[blancs.Count - 1].fin = peaks[i].temps;
+                        silences[silences.Count - 1].fin = peaks[i].temps;
                 }
                 else
                 {
-                    newBlanc = true;
-                    if (blancs[blancs.Count - 1].fin == null)
-                        blancs.RemoveAt(blancs.Count - 1);
+                    newSilence = true;
+                    if (silences[silences.Count - 1].fin == null)
+                        silences.RemoveAt(silences.Count - 1);
                 }
             }
             #endregion
 
-            #region supprime les blancs de moins de X secondes
-            if (blanc_dureemini_seconde > 0)
+            #region supprime les silences de moins de X secondes
+            if (silence_dureemini_seconde > 0)
             {
                 //(vu qu'on supprime dans une itération → pas de foreach)
-                for (int i = 0; i < blancs.Count; i++)
-                    if (blancs[i].duree < blanc_dureemini_seconde)
+                for (int i = 0; i < silences.Count; i++)
+                    if (silences[i].duree < silence_dureemini_seconde)
                     {
-                        blancs.RemoveAt(i);
+                        silences.RemoveAt(i);
                         i--;
                     }
             }
             #endregion
 
-            return blancs;
+            return silences;
         }
 
     }
 
     public static class NAudio_JJ
     {
-        public static TimeSpan MusicFileInfo(string path)
+        public static double MusicTotalSeconds(string path)
         {
             TimeSpan time;
             using (Mp3FileReader reader = new Mp3FileReader(path))
                 time = reader.TotalTime;
-            return time;
+            return time.TotalSeconds;
         }
 
         public static void AudioExtractor(string path_in, string path_out, double start_secondes, double end_secondes)

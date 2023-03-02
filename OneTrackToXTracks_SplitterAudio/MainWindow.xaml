@@ -29,8 +29,8 @@
             <Grid Grid.Column="0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="auto"/>
-                    <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="auto"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <Grid.RowDefinitions>
@@ -38,23 +38,46 @@
                     <RowDefinition Height="auto"/>
                     <RowDefinition Height="auto"/>
                     <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
                 </Grid.RowDefinitions>
+                <Label Grid.Row="0" Grid.Column="0" Content="Source file" HorizontalAlignment="Left"  Height="33" VerticalAlignment="Top" />
+                <Button Grid.Row="0" Grid.Column="1"  Margin="5" Click="SelectFile_btn_Click" Content="Select file in" ToolTip="Select file in"/>
+                <TextBox Grid.Row="0" Grid.Column="2" x:Name="file" Height="23" VerticalAlignment="Center" VerticalContentAlignment="Center" />
 
-                <Label Grid.Row="0" Grid.Column="0" Content="Author"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
-                <Label Grid.Row="1" Grid.Column="0" Content="Album"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
-                <Label Grid.Row="2" Grid.Column="0" Content="Source file" HorizontalAlignment="Left"  Height="33" VerticalAlignment="Top" />
-                <Label Grid.Row="3" Grid.Column="0" Content="Destination folder"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
+                <Label Grid.Row="1" Grid.Column="0" Content="Analyse file" HorizontalAlignment="Left"  Height="33" VerticalAlignment="Top" />
+                <StackPanel Grid.Row="1" Grid.Column="1" Margin="5"  Orientation="Horizontal" >
+                    <Button Margin="5" Click="AnalyseFileFromJSON_btn_Click" Content="Load Analyse file" ToolTip="Analyse file"/>
+                    <Button Margin="5" Click="AnalyseFile_btn_Click" Content="Analyse file" ToolTip="Analyse file"/>
+                </StackPanel>
+                <ProgressBar Grid.Row="1" Grid.Column="2" Height="15" x:Name="_progressbar" Minimum="0" Maximum="100" />
 
-                <TextBox Grid.Row="0" Grid.Column="1" x:Name="author" Height="23" VerticalAlignment="Center" />
-                <TextBox Grid.Row="1" Grid.Column="1" x:Name="album" Height="23" VerticalAlignment="Center" />
-                <TextBox Grid.Row="2" Grid.Column="1" x:Name="file" Height="23" VerticalAlignment="Center" />
-                <TextBox Grid.Row="3" Grid.Column="1" x:Name="folder" Height="23" VerticalAlignment="Center" />
+                <Label Grid.Row="2" Grid.Column="0" Content="Destination folder"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
+                <StackPanel Grid.Row="2" Grid.Column="1" Margin="5"  Orientation="Horizontal" >
+                    <Button Margin="5" Click="CreateFolder_btn_Click" Content="AutoCreate folder" ToolTip="Create from title a new folder"/>
+                    <Button Margin="5" Click="SelectFolder_btn_Click" Content="Select folder out" ToolTip="Select folder out"/>
+                </StackPanel>
+                <TextBox Grid.Row="2" Grid.Column="2" x:Name="folder" Height="23" VerticalAlignment="Center" VerticalContentAlignment="Center" />
 
-                <Button Grid.Row="2" Grid.Column="2" Height="30" Width="30" Margin="5,0" Click="SelectFile_btn_Click" Content="Select file in" ToolTip="Select file in"/>
-                <Button Grid.Row="3" Grid.Column="2" Height="30" Width="30" Margin="5,0" Click="SelectFolder_btn_Click" Content="Select folder out" ToolTip="Select folder out"/>
+                <TextBox Grid.Row="3" Grid.Column="2" x:Name="author" Height="23" VerticalAlignment="Center" VerticalContentAlignment="Center" />
+                <Label Grid.Row="3" Grid.Column="0" Content="Author"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
+
+                <TextBox Grid.Row="4" Grid.Column="2" x:Name="album" Height="23" VerticalAlignment="Center" VerticalContentAlignment="Center" />
+                <Label Grid.Row="4" Grid.Column="0" Content="Album"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
 
                 <!--<Image Grid.Row="2" Grid.Column="2" Height="30" Width="30" Margin="5,0" MouseDown="SelectFile_Click" Source="/Resources/file.png"/>
                 <Image Grid.Row="3" Grid.Column="2" Height="30" Width="30" Margin="5,0" MouseDown="SelectFolder_Click" Source="/Resources/folder.png"/>-->
+
+                <Grid Grid.Row="5"  Grid.ColumnSpan="3" >
+                    <GroupBox Header="Detection">
+                        <StackPanel Orientation="Vertical">
+                            <RadioButton Margin="5" x:Name="mode_rb_auto" Content="Automatique" IsChecked="True"/>
+                            <RadioButton Margin="5" x:Name="mode_rb_text" Content="From texte &quot;00:01:23 title&quot; → time, space, title (eventualy with spaces)"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                </Grid>
+
             </Grid>
 
             <StackPanel Grid.Column="1">
@@ -96,12 +119,14 @@
             <TextBlock Grid.Column="0" Grid.Row="0" Text="Texte" />
             <TextBox Grid.Column="0" Grid.Row="1" x:Name="txt" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"  />
 
-            <TextBlock Grid.Column="2" Grid.Row="0" Text="Peaks and Voids" />
+            <TextBlock Grid.Column="2" Grid.Row="0" Text="Peaks and Silences" />
             <Grid Grid.Column="2" Grid.Row="1" >
                 <local2:ZoomBorder x:Name="zoomBorder" ClipToBounds="True" Background="Gray">
-                    <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox">
-                        <Canvas x:Name="rectangles" ClipToBounds="True" Height="1" Width="1"/>
-                    </Viewbox>
+                    <Grid>
+                        <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox">
+                            <Canvas x:Name="rectangles" ClipToBounds="True" Height="1" Width="1"/>
+                        </Viewbox>
+                    </Grid>
                 </local2:ZoomBorder>
             </Grid>
             <GridSplitter Grid.Column="3" Grid.RowSpan="2"
@@ -112,10 +137,10 @@
 
             <Menu Grid.Column="4" Grid.Row="0" >
                 <MenuItem Header="Transitions detection"/>
-                <MenuItem Header="Del" Click="Blanc_selected_delete"/>
+                <MenuItem Header="Del" Click="Silence_selected_delete"/>
             </Menu>
 
-            <ListBox Grid.Column="4" Grid.Row="1" x:Name="lbox_blanc" SelectionChanged="lbox_blanc_SelectionChanged">
+            <ListBox Grid.Column="4" Grid.Row="1" x:Name="lbox_silence" SelectionChanged="lbox_silence_SelectionChanged">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="Padding" Value="0"/>
@@ -133,7 +158,7 @@
                     </Style>
                 </ListBox.ItemContainerStyle>
             </ListBox>
-            
+
         </Grid>
 
     </Grid>

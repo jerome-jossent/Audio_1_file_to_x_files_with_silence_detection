@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using Microsoft.VisualBasic.Devices;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,17 +16,26 @@ namespace PanAndZoom
 
         bool X_fixed = true;
 
-        TranslateTransform GetTranslateTransform(UIElement element)
+        TranslateTransform translateTransform = null;
+        ScaleTransform scaleTransform = null;
+
+        public TranslateTransform _GetTranslateTransform(UIElement element)
         {
-            return (TranslateTransform)((TransformGroup)element.RenderTransform)
-              .Children.First(tr => tr is TranslateTransform);
+            if (translateTransform == null)
+                translateTransform = (TranslateTransform)((TransformGroup)element.RenderTransform).Children.First(tr => tr is TranslateTransform);
+            return translateTransform;
         }
 
-        ScaleTransform GetScaleTransform(UIElement element)
+        public ScaleTransform _GetScaleTransform(UIElement element)
         {
-            return (ScaleTransform)((TransformGroup)element.RenderTransform)
-              .Children.First(tr => tr is ScaleTransform);
+            if (scaleTransform == null)
+                scaleTransform = (ScaleTransform)((TransformGroup)element.RenderTransform).Children.First(tr => tr is ScaleTransform);
+            return scaleTransform;
         }
+
+        public TranslateTransform _GetTranslateTransform() { return _GetTranslateTransform(child); }
+
+        public ScaleTransform _GetScaleTransform() { return _GetScaleTransform(child); }
 
         public override UIElement Child
         {
@@ -64,14 +74,16 @@ namespace PanAndZoom
             if (child != null)
             {
                 // reset zoom
-                var st = GetScaleTransform(child);
+                var st = _GetScaleTransform(child);
                 st.ScaleX = 1.0;
                 st.ScaleY = 1.0;
 
                 // reset pan
-                var tt = GetTranslateTransform(child);
+                var tt = _GetTranslateTransform(child);
                 tt.X = 0.0;
                 tt.Y = 0.0;
+
+                ZoomChangeEvent?.Invoke(this, null);
             }
         }
 
@@ -80,12 +92,14 @@ namespace PanAndZoom
             if (child != null)
             {
                 // zoom
-                var st = GetScaleTransform(child);
+                var st = _GetScaleTransform(child);
                 st.ScaleY = aboluteZoom;
 
                 // pan
-                var tt = GetTranslateTransform(child);
+                var tt = _GetTranslateTransform(child);
                 tt.Y = -relativeY * ActualHeight * aboluteZoom + ActualHeight / 2;
+
+                ZoomChangeEvent?.Invoke(this, null);
             }
         }
 
@@ -106,8 +120,8 @@ namespace PanAndZoom
         {
             if (child != null)
             {
-                var st = GetScaleTransform(child);
-                var tt = GetTranslateTransform(child);
+                var st = _GetScaleTransform(child);
+                var tt = _GetTranslateTransform(child);
 
                 //double zoom = e.Delta > 0 ? .2 : -.2;
                 double zoom = e.Delta > 0 ? 1.2 : .8;
@@ -136,6 +150,8 @@ namespace PanAndZoom
                     tt.X = absoluteX - relative.X * st.ScaleX;
 
                 tt.Y = absoluteY - relative.Y * st.ScaleY;
+
+                ZoomChangeEvent?.Invoke(this, null);
             }
         }
 
@@ -143,14 +159,12 @@ namespace PanAndZoom
         {
             if (child != null)
             {
-                var tt = GetTranslateTransform(child);
+                var tt = _GetTranslateTransform(child);
                 start = e.GetPosition(this);
 
                 double X = X_fixed ? origin.X : tt.X;
 
-
                 origin = new Point(tt.X, tt.Y);
-
 
                 this.Cursor = Cursors.Hand;
                 child.CaptureMouse();
@@ -171,16 +185,19 @@ namespace PanAndZoom
             this.Reset();
         }
 
-        public delegate void SampleEventHandler(object sender, SampleEventArgs e);
-        public static event SampleEventHandler SampleEvent;
+        public delegate void MoveEventHandler(object sender, ZoomBorderEventArgs e);
+        public static event MoveEventHandler MoveEvent;
+
+        public delegate void ZoomChangeEventHandler(object sender, ZoomBorderEventArgs args);
+        public static event ZoomChangeEventHandler ZoomChangeEvent;
 
         private void child_MouseMove(object sender, MouseEventArgs e)
         {
             if (child != null)
             {
                 Point mouse = e.GetPosition(this);
-                var st = GetScaleTransform(child);
-                var tt = GetTranslateTransform(child);
+                var st = _GetScaleTransform(child);
+                var tt = _GetTranslateTransform(child);
                 if (child.IsMouseCaptured)
                 {
                     Vector v = start - mouse;
@@ -191,19 +208,21 @@ namespace PanAndZoom
 
                 }
                 // Point mouse2 = e.GetPosition(this);
-                SampleEvent?.Invoke(this, new SampleEventArgs(st.ScaleY, tt.Y / ActualHeight, mouse.Y / ActualHeight));
+                MoveEvent?.Invoke(this, new ZoomBorderEventArgs(st.ScaleY, tt.Y / ActualHeight, mouse.Y / ActualHeight));
             }
         }
+
+
         #endregion
     }
 
-    public class SampleEventArgs
+    public class ZoomBorderEventArgs
     {
         public double scaleY { get; }
         public double relativeoffsetY { get; }
         public double mouseRelativeY { get; }
 
-        public SampleEventArgs(double scale, double offset, double mouse)
+        public ZoomBorderEventArgs(double scale, double offset, double mouse)
         {
             this.scaleY = scale;
             this.relativeoffsetY = offset;

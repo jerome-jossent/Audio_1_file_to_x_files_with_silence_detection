@@ -16,10 +16,12 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Threading;
 using TagLib;
+using System.Xml.Linq;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace OneTrackToXTracks_SplitterAudio
 {
-    public partial class MainWindow : Window, INotifyPropertyChanged
+    public partial class MainWindow : System.Windows.Window, INotifyPropertyChanged
     {
         void NotifyPropertyChanged([CallerMemberName] String propertyName = "") { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName)); }
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -38,13 +40,16 @@ namespace OneTrackToXTracks_SplitterAudio
         }
         bool ready_to_Process;
 
-        TimeSpan totaltime;
-        List<Title> titles;
-        Dictionary<System.Windows.Shapes.Rectangle, Title> tracks; List<Peak> peaks;
-        List<Blanc> blancs;
+        enum Mode { timeFromText, timeFromSilenceDetection }
+
+        DATA data;
+
+        Dictionary<Pastille, Silence> silences_pastille;
         Polygon sound_peaks;
-        Polygon sound_blancs;
-        Polygon blanc_selected;
+        Polygon sound_silences;
+        Polygon silence_selected;
+
+        enum ZLevelOnCanvas { tracks = 0, peaks = 3, silences = 5, pastilles = 10 }
 
         public MainWindow()
         {
@@ -54,16 +59,19 @@ namespace OneTrackToXTracks_SplitterAudio
 
         void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            data = new DATA();
             INITS();
-            GetInfo();
-            ZoomBorder.SampleEvent += ZoomBorder_SampleEvent;
-            PreProcess();
+            //GetInfo();
+            ZoomBorder.MoveEvent += ZoomBorder_MoveEvent;
+            ZoomBorder.ZoomChangeEvent += ZoomBorder_ZoomChangeEvent;
+            //PreProcess();
         }
 
         void INITS()
         {
             _Title = Title;
             file.Text = @"D:\Videos\Download Videos\MOBY - Amiga Days (Remasters Vol.1) [[FULL ALBUM]].mp3";
+            //file.Text = @"D:\Ma musique\Musique\_CHIPTUNE\Best of Chiptune [8 bit music, retro visuals].mp3";
             folder.Text = @"D:\Videos\Download Videos\TEST";
             txt.Text = "Progressive Funk (Impact Inc. - Vectorball)\r\nPapoornoo2 (Apology - Demodisk 1)\r\nThe Last Knight (Alcatraz - Megademo IV)\r\nDragonsfunk (Angels - Copper Master)\r\nPelforth Blues (Alcatraz - Music Disk 1)\r\nThe Knight is Back (Alcatraz - Music Disk 1)\r\nKnulla Kuk (Quartex - Substance)\r\nLet there be Funk (Dreamdealers - Tales Of A Dream \r\nGroovy Thing (Dreamdealers - Innervision)\r\n88, Funky Avenue\r\nP.A.T.A.O.P.A.\r\nDrink My Pain Away (The Special Brothers - Live #1)\r\nKanyenamaryamalabar\r\nCortouchka !\r\nHeads Up (Alliance Design/DRD - Arkham Asylum)\r\nRaging Fire (Dreamdealers - Raging Fire)\r\nLivin' Insanity (Sanity - Arte)\r\nElekfunk (Sanity - Arte)\r\nMobyle (Sanity - Arte)\r\nMore Than Music (Alcatraz - More Than Music)";
             author.Text = "MOBY";
@@ -77,20 +85,40 @@ namespace OneTrackToXTracks_SplitterAudio
                 file.Text = openFileDialog.FileName;
 
         }
+        void CreateFolder_btn_Click(object sender, RoutedEventArgs e)
+        {
+            FileInfo fileInfo = new FileInfo(file.Text);
+            string folder = fileInfo.DirectoryName;
+            string filename = fileInfo.Name.Substring(0, fileInfo.Name.Length - fileInfo.Extension.Length);
+            this.folder.Text = folder + "\\" + filename + "\\";
+        }
+
         void SelectFolder_btn_Click(object sender, RoutedEventArgs e)
         {
             FolderBrowserDialog folderBrowserDialog = new FolderBrowserDialog();
             if (folderBrowserDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 folder.Text = folderBrowserDialog.SelectedPath;
         }
+
+        void AnalyseFileFromJSON_btn_Click(object sender, RoutedEventArgs e)
+        {
+            GetInfo(true);
+        }
+
+        void AnalyseFile_btn_Click(object sender, RoutedEventArgs e)
+        {
+            GetInfo(false);
+        }
+
+
         void PreProcess_btn_Click(object sender, RoutedEventArgs e) { PreProcess(); }
         void Go_btn_Click(object sender, RoutedEventArgs e) { Process(); }
 
-        void lbox_blanc_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        void lbox_silence_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (e.AddedItems.Count == 0) return;
 
-            Blanc_selected((Blanc)e.AddedItems[0]);
+            Silence_selected((Silence)e.AddedItems[0]);
         }
 
         void lbox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -101,60 +129,92 @@ namespace OneTrackToXTracks_SplitterAudio
             Title_selected(selection.title);
         }
 
-        void ZoomBorder_SampleEvent(object sender, PanAndZoom.SampleEventArgs e)
+        void ZoomBorder_MoveEvent(object sender, PanAndZoom.ZoomBorderEventArgs e)
         {
             double y_relative = (e.mouseRelativeY - e.relativeoffsetY) / e.scaleY;
-            double y_time = y_relative * totaltime.TotalSeconds;
+            double y_time = y_relative * data.totaltime;
             TimeSpan t = TimeSpan.FromSeconds(y_time);
             string titre = _Title + " - " + t.ToString("G");
             Dispatcher.BeginInvoke(() => (Title = titre));
         }
 
-        void Blanc_selected_delete(object sender, RoutedEventArgs e)
+        void ZoomBorder_ZoomChangeEvent(object sender, ZoomBorderEventArgs args)
         {
-            blancs.Remove((Blanc)lbox_blanc.SelectedItem);
-            List_Blancs();
+            DrawOrUpdate_SilencesPastilles();
+        }
+
+        void Silence_selected_delete(object sender, RoutedEventArgs e)
+        {
+            data.silences.Remove((Silence)lbox_silence.SelectedItem);
+            List_Silences();
             ReDrawGraph();
         }
         #endregion
 
-        void GetInfo()
+        void GetInfo(bool usejsoninstead)
         {
             //Read musiquefile
-            totaltime = NAudio_JJ.NAudio_JJ.MusicFileInfo(file.Text);
+            data.totaltime = NAudio_JJ.NAudio_JJ.MusicTotalSeconds(file.Text);
 
             //get Peaks Amplitude
             string jsonfile = AppDomain.CurrentDomain.BaseDirectory + @"json.tmp";
-            bool usejsoninstead = true;
-            if (!System.IO.File.Exists(jsonfile)) usejsoninstead = false;
+            if (!System.IO.File.Exists(jsonfile))
+                usejsoninstead = false;
+
+            string path = file.Text;
 
             if (usejsoninstead)
-                peaks = NAudio_JJ.Peak.Get_Peaks_FromJson(jsonfile);
+            {
+                data.peaks = Peak.Get_Peaks_FromJson(jsonfile);
+                _progressbar.Dispatcher.Invoke(new Action(() => { _progressbar.Value = 100; }));
+                GetInfo_2(data.peaks, ref data.silences, ref data.titles, data.totaltime);
+            }
             else
             {
-                peaks = NAudio_JJ.Peak.Get_Peaks(file.Text);
-                string jsonString = JsonSerializer.Serialize(peaks);
+
+                data.peaks = Peak.Get_Peaks(path);
+                string jsonString = JsonSerializer.Serialize(data.peaks);
                 System.IO.File.WriteAllText(jsonfile, jsonString);
+                GetInfo_2(data.peaks, ref data.silences, ref data.titles, data.totaltime);
             }
 
-            //get blancs
-            blancs = NAudio_JJ.Blanc.Get_Blancs(peaks, 0.005, 0.2);
+        }
 
-            List_Blancs();
+        void GetInfo_2(List<Peak> peaks, ref List<Silence> silences, ref List<Title> titles, double totaltime_sec)
+        {
+            //get silences
+            silences = Silence.Get_Silences(peaks, 0.005, 0.2);
 
-            titles = TracksFinder(blancs);
-            List_Titles(titles);
+            TracksFinder(silences, ref titles);
 
+            //TRIM data
+            //silences 1 et n
+            if (silences[0].debut == TimeSpan.Zero.TotalSeconds)
+            {
+                //change piste 1
+                titles[0].start = TimeSpan.FromSeconds((double)silences[0].fin);
+                //delete silence 1
+                silences.RemoveAt(0);
+            }
+            if ((double)silences[silences.Count - 1].fin >= totaltime_sec)
+            {
+                //change piste n
+                titles[titles.Count - 1].end = TimeSpan.FromSeconds(silences[silences.Count - 1].debut);
+                //delete silence n
+                silences.RemoveAt(silences.Count - 1);
+            }
+
+            List_Titles();
+            List_Silences();
             ReDrawGraph();
         }
 
         void PreProcess()
         {
-            List_Blancs();
-
+            List_Silences();
             //Read text => make a list of titles
-            TitlesMaker(txt.Text, titles);
-            List_Titles(titles);
+            TitlesMaker(txt.Text, data.titles);
+            List_Titles();
 
             //représentations graphiques
             ReDrawGraph();
@@ -163,16 +223,25 @@ namespace OneTrackToXTracks_SplitterAudio
 
         void ReDrawGraph()
         {
-            rectangles.Children.Clear();
+            for (int i = 0; i < rectangles.Children.Count; i++)
+            {
+                var item = rectangles.Children[i];
+                if (item is Pastille)
+                    continue;
+                rectangles.Children.RemoveAt(i);
+                i--;
+            }
             Draw_Titles();
-            Draw_Peaks(System.Windows.Media.Color.FromRgb(40, 40, 40));
-            Draw_Blancs(System.Windows.Media.Colors.White);
+            Draw_Peaks(Color.FromRgb(40, 40, 40));
+            Draw_Silences(Colors.White);
+
+            DrawOrUpdate_SilencesPastilles();
         }
 
         void Process()
         {
             //Extraction des titres du fichier original
-            foreach (Title titre in titles)
+            foreach (Title titre in data.titles)
             {
                 //create file
                 NAudio_JJ.NAudio_JJ.AudioExtractor(file.Text,
@@ -216,41 +285,40 @@ namespace OneTrackToXTracks_SplitterAudio
             OpenFolder(folder.Text);
         }
 
-        List<Title> TracksFinder(List<Blanc> blancs)
+        static void TracksFinder(List<Silence> silences, ref List<Title> titles)
         {
-            List<Title> titles = new List<Title>();
+            titles = new List<Title>();
 
             double temps_mini_sec = 5;
 
-            for (int i = 0; i < blancs.Count - 1; i++)
+            for (int i = 0; i < silences.Count - 1; i++)
             {
-                Blanc blanc = blancs[i];
+                Silence silence = silences[i];
 
                 //first title
                 if (i == 0)
                 {
                     //est ce que le 
-                    if (blanc.debut > temps_mini_sec)
+                    if (silence.debut > temps_mini_sec)
                     {
-                        titles.Add(new Title(TimeSpan.Zero, TimeSpan.FromSeconds(blanc.debut))
+                        titles.Add(new Title(TimeSpan.Zero, TimeSpan.FromSeconds(silence.debut))
                         {
                             index = titles.Count + 1,
                             brush = new SolidColorBrush(GetNextColor(titles.Count + 1)),
-                            album = album.Text,
-                            author = author.Text,
+                            //album = album.Text,
+                            //author = author.Text,
                         });
                     }
                 }
-                titles.Add(new Title(TimeSpan.FromSeconds((double)blanc.fin), TimeSpan.FromSeconds(blancs[i + 1].debut))
+                titles.Add(new Title(TimeSpan.FromSeconds((double)silence.fin), TimeSpan.FromSeconds(silences[i + 1].debut))
                 {
                     index = titles.Count + 1,
                     brush = new SolidColorBrush(GetNextColor(titles.Count + 1)),
-                    album = album.Text,
-                    author = author.Text,
+                    //album = album.Text,
+                    //author = author.Text,
                 });
 
             }
-            return titles;
         }
 
         void TitlesMaker(string text, List<Title> titles)
@@ -298,37 +366,35 @@ namespace OneTrackToXTracks_SplitterAudio
         }
 
         #region To UI
-        void List_Titles(List<Title> titles)
+        void List_Titles()
         {
-            lbox.Items.Clear();
-            for (int i = 0; i < titles.Count; i++)
+            for (int i = 0; i < data.titles.Count; i++)
             {
-                Title title = titles[i];
-
                 Title_UC uc = new Title_UC();
-                uc._Link(title);
-
-                lbox.Items.Add(uc);
+                uc._Link(data.titles[i]);
             }
+
+            lbox.Items.Clear();
+            for (int i = 0; i < data.titles.Count; i++)
+                lbox.Items.Add(data.titles[i]);
         }
 
-        void List_Blancs()
+        void List_Silences()
         {
-            lbox_blanc.Items.Clear();
-            for (int i = 0; i < blancs.Count; i++)
+            lbox_silence.Items.Clear();
+            for (int i = 0; i < data.silences.Count; i++)
             {
-                blancs[i].index = i + 1;
-                lbox_blanc.Items.Add(blancs[i]);
+                data.silences[i].index = i + 1;
+                lbox_silence.Items.Add(data.silences[i]);
             }
         }
 
         void Draw_Titles()
         {
-            if (titles == null) return;
+            if (data.titles == null)
+                return;
 
-            tracks = new Dictionary<System.Windows.Shapes.Rectangle, Title>();
-
-            foreach (Title titre in titles)
+            foreach (Title titre in data.titles)
             {
                 // Create the rectangle
                 System.Windows.Shapes.Rectangle rec = new System.Windows.Shapes.Rectangle()
@@ -339,14 +405,17 @@ namespace OneTrackToXTracks_SplitterAudio
                     Stroke = System.Windows.Media.Brushes.Black,
                     StrokeThickness = 0,
                 };
-
-                // Add to canvas
-                rectangles.Children.Add(rec);
-                Canvas.SetTop(rec, titre.start.TotalSeconds);
-                Canvas.SetLeft(rec, 0);
-
                 titre.rectangle = rec;
-                tracks.Add(rec, titre);
+
+                //Add to canvas
+                Dispatcher.Invoke(new Action(() =>
+                {
+
+                    rectangles.Children.Add(rec);
+                    System.Windows.Controls.Panel.SetZIndex(rec, (int)ZLevelOnCanvas.tracks);
+                    Canvas.SetTop(rec, titre.start.TotalSeconds);
+                    Canvas.SetLeft(rec, 0);
+                }));
             }
         }
 
@@ -357,78 +426,123 @@ namespace OneTrackToXTracks_SplitterAudio
             sound_peaks.Fill = new SolidColorBrush(color);
             sound_peaks.Points.Add(new System.Windows.Point(0, 0));
 
-            for (int i = 0; i < peaks.Count; i++)
-                sound_peaks.Points.Add(new System.Windows.Point(peaks[i].amplitude, peaks[i].temps));
+            for (int i = 0; i < data.peaks.Count; i++)
+                sound_peaks.Points.Add(new System.Windows.Point(data.peaks[i].amplitude, data.peaks[i].temps));
 
-            sound_peaks.Points.Add(new System.Windows.Point(0, totaltime.TotalSeconds));
+            sound_peaks.Points.Add(new System.Windows.Point(0, data.totaltime));
             sound_peaks.Points.Add(new System.Windows.Point(0, 0));
 
             //positionnement du dessin
             rectangles.Children.Add(sound_peaks);
+            System.Windows.Controls.Panel.SetZIndex(sound_peaks, (int)ZLevelOnCanvas.peaks);
             Canvas.SetTop(sound_peaks, 0);
             Canvas.SetLeft(sound_peaks, 0);
 
-            rectangles.Height = totaltime.TotalSeconds;
+            rectangles.Height = data.totaltime;
         }
 
-        void Draw_Blancs(System.Windows.Media.Color color)
+        void Draw_Silences(System.Windows.Media.Color color)
         {
-            //dessine des traits à chaque blanc = f(temps)
-            sound_blancs = new Polygon();
-            sound_blancs.Fill = new SolidColorBrush(color);
-            sound_blancs.Points.Add(new System.Windows.Point(1, 0));
+            //dessine des traits à chaque silence = f(temps)
+            sound_silences = new Polygon();
+            sound_silences.Fill = new SolidColorBrush(color);
+            sound_silences.Points.Add(new System.Windows.Point(1, 0));
 
             double X, Y;
-            foreach (Blanc blanc in this.blancs)
+            foreach (Silence silence in data.silences)
             {
                 X = 1;
-                Y = blanc.debut;
-                sound_blancs.Points.Add(new System.Windows.Point(X, Y));
+                Y = silence.debut;
+                sound_silences.Points.Add(new System.Windows.Point(X, Y));
                 X = 0.1;
-                sound_blancs.Points.Add(new System.Windows.Point(X, Y));
-                Y = (double)blanc.fin;
-                sound_blancs.Points.Add(new System.Windows.Point(X, Y));
+                sound_silences.Points.Add(new System.Windows.Point(X, Y));
+                Y = (double)silence.fin;
+                sound_silences.Points.Add(new System.Windows.Point(X, Y));
                 X = 1;
-                sound_blancs.Points.Add(new System.Windows.Point(X, Y));
+                sound_silences.Points.Add(new System.Windows.Point(X, Y));
             }
-            sound_blancs.Points.Add(new System.Windows.Point(1, 0));
+            sound_silences.Points.Add(new System.Windows.Point(1, 0));
 
             //positionnement du dessin
-            rectangles.Children.Add(sound_blancs);
-            Canvas.SetTop(sound_blancs, 0);
-            Canvas.SetLeft(sound_blancs, 0);
+            rectangles.Children.Add(sound_silences);
+            System.Windows.Controls.Panel.SetZIndex(sound_silences, (int)ZLevelOnCanvas.silences);
+            Canvas.SetTop(sound_silences, 0);
+            Canvas.SetLeft(sound_silences, 0);
 
-            rectangles.Height = totaltime.TotalSeconds;
+            rectangles.Height = data.totaltime;
+        }
+
+        void DrawOrUpdate_SilencesPastilles()
+        {
+            TranslateTransform st = zoomBorder._GetTranslateTransform();
+            ScaleTransform sc = zoomBorder._GetScaleTransform();
+
+            if (st != null && sc != null)
+            {
+                if (silences_pastille == null)
+                {
+                    silences_pastille = new Dictionary<Pastille, Silence>();
+                    foreach (Silence silence in data.silences)
+                    {
+                        Pastille pastille = new Pastille();
+                        pastille.Set(silence.index.ToString("00"), stroke_color: Brushes.Black, fill_color: Brushes.White, stroke_thickness: 1);
+                        rectangles.Children.Add(pastille);
+                        silences_pastille.Add(pastille, silence);
+                    }
+                }
+
+                double fixedwidth_prct = 0.3;
+                double rectangles_W_abs = rectangles.ActualWidth / sc.ScaleX;
+                double rectangles_H_abs = rectangles.ActualHeight / sc.ScaleY;
+                double fixedheight_prct = rectangles.ActualHeight / 10 * fixedwidth_prct * rectangles_W_abs / rectangles_H_abs;// 0.05;
+
+                //mis à jour du positionnement des pastilles
+                foreach (var item in silences_pastille)
+                {
+                    Pastille pastille = item.Key;
+                    Silence silence = item.Value;
+
+                    pastille.Width = fixedwidth_prct * rectangles_W_abs;
+                    pastille.Height = fixedheight_prct * rectangles_H_abs / rectangles_W_abs;
+
+                    double top = silence.milieu - pastille.Height / 2;
+                    double left = rectangles.Width - pastille.Width;
+
+                    System.Windows.Controls.Panel.SetZIndex(pastille, (int)ZLevelOnCanvas.pastilles);
+                    Canvas.SetTop(pastille, top);
+                    Canvas.SetLeft(pastille, left);
+                }
+            }
         }
 
         void Title_selected(Title title)
         {
-            double relativeStart = title.start.TotalSeconds / totaltime.TotalSeconds;
-            double relativeEnd = title.end.TotalSeconds / totaltime.TotalSeconds;
+            double relativeStart = title.start.TotalSeconds / data.totaltime;
+            double relativeEnd = title.end.TotalSeconds / data.totaltime;
             zoomBorder.SetRange(relativeStart, relativeEnd);
         }
 
-        void Blanc_selected(Blanc? blanc)
+        void Silence_selected(Silence? silence)
         {
-            if (blanc_selected != null)
-                rectangles.Children.Remove(blanc_selected);
-            if (blanc == null)
-                blanc_selected = null;
+            if (silence_selected != null)
+                rectangles.Children.Remove(silence_selected);
+            if (silence == null)
+                silence_selected = null;
             else
             {
-                blanc_selected = new Polygon();
-                blanc_selected.Fill = new SolidColorBrush(System.Windows.Media.Colors.Red);
-                blanc_selected.Points.Add(new System.Windows.Point(0.1, blanc.debut));
-                blanc_selected.Points.Add(new System.Windows.Point(0.9, blanc.debut));
-                blanc_selected.Points.Add(new System.Windows.Point(0.9, (double)blanc.fin));
-                blanc_selected.Points.Add(new System.Windows.Point(0.1, (double)blanc.fin));
-                rectangles.Children.Add(blanc_selected);
-                Canvas.SetTop(blanc_selected, 0);
-                Canvas.SetLeft(blanc_selected, 0);
+                silence_selected = new Polygon();
+                silence_selected.Fill = new SolidColorBrush(System.Windows.Media.Colors.Red);
+                silence_selected.Points.Add(new System.Windows.Point(0.1, silence.debut));
+                silence_selected.Points.Add(new System.Windows.Point(0.9, silence.debut));
+                silence_selected.Points.Add(new System.Windows.Point(0.9, (double)silence.fin));
+                silence_selected.Points.Add(new System.Windows.Point(0.1, (double)silence.fin));
+                rectangles.Children.Add(silence_selected);
+                Canvas.SetTop(silence_selected, 0);
+                Canvas.SetLeft(silence_selected, 0);
 
                 //zoom in
-                double y_moyen = ((double)blanc.fin + blanc.debut) / 2;
-                double y_relative = y_moyen / totaltime.TotalSeconds;
+                double y_moyen = ((double)silence.fin + silence.debut) / 2;
+                double y_relative = y_moyen / data.totaltime;
                 zoomBorder.SetZoom(y_relative, aboluteZoom: 500);
             }
         }
@@ -436,7 +550,7 @@ namespace OneTrackToXTracks_SplitterAudio
         #endregion
 
         #region TOOLS
-        List<System.Windows.Media.Color> colors = new List<System.Windows.Media.Color>(){
+        static List<System.Windows.Media.Color> colors = new List<System.Windows.Media.Color>(){
             System.Windows.Media.Colors.CadetBlue,
             System.Windows.Media.Colors.DarkKhaki,
             System.Windows.Media.Colors.DarkTurquoise,
@@ -453,7 +567,7 @@ namespace OneTrackToXTracks_SplitterAudio
             System.Windows.Media.Colors.Thistle
             };
 
-        System.Windows.Media.Color GetNextColor(int index)
+        static System.Windows.Media.Color GetNextColor(int index)
         {
             System.Windows.Media.Color c;
             while (index > colors.Count - 1) { index -= colors.Count; }

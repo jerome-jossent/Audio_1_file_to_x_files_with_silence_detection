@@ -33,8 +33,6 @@ namespace OneTrackToXTracks_SplitterAudio
             _index.Text = title.index.ToString("00");
 
             _deb.Value = title.start;
-            if (title.start == TimeSpan.Zero)
-                _deb.Value = TimeSpan.Zero;
             _fin.Value = title.end;
 
             _author.Text = title.author;

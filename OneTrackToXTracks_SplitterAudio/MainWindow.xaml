@@ -117,13 +117,11 @@
               ShowsPreview="True"
               />
         
-        <Grid Grid.Row="2" SizeChanged="GridZoom_SizeChanged">
+        <Grid Grid.Row="2" SizeChanged="GridZoom_SizeChanged" Height="100">
             <local2:ZoomBorder x:Name="zoomBorder" ClipToBounds="True" Background="Gray">
-                <Grid>
                     <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox">
                         <Canvas x:Name="rectangles" ClipToBounds="True" Height="1" Width="1"/>
                     </Viewbox>
-                </Grid>
             </local2:ZoomBorder>
         </Grid>
 

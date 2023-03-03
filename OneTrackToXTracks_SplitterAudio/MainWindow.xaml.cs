@@ -668,7 +668,7 @@ namespace OneTrackToXTracks_SplitterAudio
 
                 //double top = silence.milieu - pastille.Height / 2;
                 //double left = rectangles.Width - pastille.Width;
-                double top = rectangles.Height - pastille.Height;
+                double top = 0;// rectangles.Height - pastille.Height;
                 double left = silence.milieu - pastille.Width / 2;
 
                 //met les nouvelles pastilles derrières les anciennes;

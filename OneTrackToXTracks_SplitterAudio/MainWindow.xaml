@@ -16,6 +16,9 @@
 
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -43,7 +46,7 @@
                     <RowDefinition Height="auto"/>
                     <RowDefinition Height="auto"/>
                 </Grid.RowDefinitions>
-                
+
                 <Label Grid.Row="0" Grid.Column="0" Content="Source file" HorizontalAlignment="Left"  Height="33" VerticalAlignment="Top" />
                 <Button Grid.Row="0" Grid.Column="1"  Margin="5" Click="SelectFile_btn_Click" Content="Select file in" ToolTip="Select file in"/>
                 <TextBox Grid.Row="0" Grid.Column="2" x:Name="file" Height="23" VerticalAlignment="Center" VerticalContentAlignment="Center" />
@@ -72,7 +75,7 @@
 
                     <!--<Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="3" Margin="5" Content="Recompute" Click="SilenceDetectionCompute_Click" />-->
                 </Grid>
-                
+
                 <Label Grid.Row="3" Grid.Column="0" Content="Destination folder"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
                 <StackPanel Grid.Row="3" Grid.Column="1" Margin="5"  Orientation="Horizontal" >
                     <Button Margin="5" Click="CreateFolder_btn_Click" Content="AutoCreate folder" ToolTip="Create from title a new folder"/>
@@ -89,36 +92,50 @@
                 <!--<Image Grid.Row="2" Grid.Column="2" Height="30" Width="30" Margin="5,0" MouseDown="SelectFile_Click" Source="/Resources/file.png"/>
                 <Image Grid.Row="3" Grid.Column="2" Height="30" Width="30" Margin="5,0" MouseDown="SelectFolder_Click" Source="/Resources/folder.png"/>-->
 
-                
+
                 <!--PLAYER-->
                 <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="PLAY" Width="50" Margin="5" Click="AudioPlayer_PLAY_Click"/>
                     <Button Content="PAUSE" Width="50" Margin="5" Click="AudioPlayer_PAUSE_Click"/>
                     <Button Content="STOP" Width="50" Margin="5" Click="AudioPlayer_STOP_Click"/>
                 </StackPanel>
-
-                <Grid Grid.Row="7" Grid.ColumnSpan="3" SizeChanged="GridZoom_SizeChanged" Height="100">
-                    <local2:ZoomBorder x:Name="zoomBorder" ClipToBounds="True" Background="Gray">
-                        <Grid>
-                            <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox">
-                                <Canvas x:Name="rectangles" ClipToBounds="True" Height="1" Width="1"/>
-                            </Viewbox>
-                        </Grid>
-                    </local2:ZoomBorder>
-                </Grid>
-
-
             </Grid>
 
             <StackPanel Grid.Column="1">
                 <Button Margin="5" Height="50" Width="50" Click="PreProcess_btn_Click" Content="PreProcess" />
                 <Button Margin="5" Height="50" Width="50" Click="Go_btn_Click" Content="GO" IsEnabled="{Binding _ready_to_Process}" />
             </StackPanel>
-
         </Grid>
 
+
+
+        <!--<TextBlock Grid.Row="1" Text="Peaks and Silences" />-->
+
+        <GridSplitter Grid.Row="1" Height="5"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch"
+              ShowsPreview="True"
+              />
+        
+        <Grid Grid.Row="2" SizeChanged="GridZoom_SizeChanged">
+            <local2:ZoomBorder x:Name="zoomBorder" ClipToBounds="True" Background="Gray">
+                <Grid>
+                    <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox">
+                        <Canvas x:Name="rectangles" ClipToBounds="True" Height="1" Width="1"/>
+                    </Viewbox>
+                </Grid>
+            </local2:ZoomBorder>
+        </Grid>
+
+        <GridSplitter Grid.Row="3" Height="5"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch"
+              ShowsPreview="True"
+              />
+
+
         <!--Texte avec durée, pistes-->
-        <Grid Grid.Row="1" >
+        <Grid Grid.Row="4" >
             <Grid.RowDefinitions>
                 <RowDefinition Height="auto"/>
                 <RowDefinition Height="*"/>
@@ -136,7 +153,7 @@
             <TextBlock Grid.Column="0" Grid.Row="0" Text="Texte" />
             <TextBox Grid.Column="0" Grid.Row="1" x:Name="txt" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"  />
 
-            <TextBlock Grid.Column="2" Grid.Row="0" Text="Peaks and Silences" />
+            <!--<TextBlock Grid.Column="2" Grid.Row="0" Text="Peaks and Silences" />-->
             <!--<Grid Grid.Column="2" Grid.Row="1" SizeChanged="GridZoom_SizeChanged" >
                 <local2:ZoomBorder x:Name="zoomBorder" ClipToBounds="True" Background="Gray">
                     <Grid>
@@ -146,11 +163,11 @@
                     </Grid>
                 </local2:ZoomBorder>
             </Grid>-->
-            <GridSplitter Grid.Column="3" Grid.RowSpan="2"
+            <!--<GridSplitter Grid.Column="3" Grid.RowSpan="2"
               HorizontalAlignment="Stretch"
               VerticalAlignment="Stretch"
               ShowsPreview="True"
-              />
+              />-->
 
             <Menu Grid.Column="4" Grid.Row="0" >
                 <MenuItem Header="Transitions detection"/>

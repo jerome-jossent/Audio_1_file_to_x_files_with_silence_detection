@@ -561,7 +561,7 @@ namespace OneTrackToXTracks_SplitterAudio
                 sound_peaks.Points.Add(new System.Windows.Point(data.peaks[i].temps, 1-data.peaks[i].amplitude));
 
             sound_peaks.Points.Add(new System.Windows.Point(data.totaltime, 1));
-            sound_peaks.Points.Add(new System.Windows.Point(0, 1));
+            //sound_peaks.Points.Add(new System.Windows.Point(0, 1));
 
             //positionnement du dessin
             rectangles.Children.Add(sound_peaks);
@@ -579,19 +579,19 @@ namespace OneTrackToXTracks_SplitterAudio
             sound_silences = new Polygon();
             sound_silences.Fill = new SolidColorBrush(color);
             //sound_silences.Points.Add(new System.Windows.Point(1, 0));
-            sound_silences.Points.Add(new System.Windows.Point(0, 1));
+            sound_silences.Points.Add(new System.Windows.Point(0, 0));
 
             double X, Y;
             foreach (Silence silence in data.silences)
             {
                 X = silence.debut;
-                Y = 1;
+                Y = 0;
                 sound_silences.Points.Add(new System.Windows.Point(X, Y));
-                Y = 0.1;
+                Y = 0.9;
                 sound_silences.Points.Add(new System.Windows.Point(X, Y));
                 X = (double)silence.fin;
                 sound_silences.Points.Add(new System.Windows.Point(X, Y));
-                Y = 1;
+                Y = 0;
                 sound_silences.Points.Add(new System.Windows.Point(X, Y));
                 //X = 1;
                 //Y = silence.debut;
@@ -604,7 +604,7 @@ namespace OneTrackToXTracks_SplitterAudio
                 //sound_silences.Points.Add(new System.Windows.Point(X, Y));
             }
             //sound_silences.Points.Add(new System.Windows.Point(1, 0));
-            sound_silences.Points.Add(new System.Windows.Point(0, 1));
+            sound_silences.Points.Add(new System.Windows.Point(0, 0));
 
             //positionnement du dessin
             rectangles.Children.Add(sound_silences);
@@ -691,8 +691,8 @@ namespace OneTrackToXTracks_SplitterAudio
             if (play_cursor_playing == null)
             {
                 play_cursor_playing = new Polyline();
-                play_cursor_playing.Points.Add(new System.Windows.Point(val,0));
                 play_cursor_playing.Points.Add(new System.Windows.Point(val,1));
+                play_cursor_playing.Points.Add(new System.Windows.Point(val,0));
                 play_cursor_playing.Stroke = new SolidColorBrush(play_cursor_playing_color);
                 rectangles.Children.Add(play_cursor_playing);
                 Canvas.SetTop(play_cursor_playing, 0);
@@ -701,8 +701,8 @@ namespace OneTrackToXTracks_SplitterAudio
             }
             else
             {
-                play_cursor_playing.Points[0] = new System.Windows.Point(val,0);
-                play_cursor_playing.Points[1] = new System.Windows.Point(val,1);
+                play_cursor_playing.Points[0] = new System.Windows.Point(val,1);
+                play_cursor_playing.Points[1] = new System.Windows.Point(val,0);
             }
             UpdateCursorThickness();
         }
@@ -724,10 +724,10 @@ namespace OneTrackToXTracks_SplitterAudio
             {
                 silence_selected = new Polygon();
                 silence_selected.Fill = new SolidColorBrush(System.Windows.Media.Colors.Red);
-                silence_selected.Points.Add(new System.Windows.Point(silence.debut, 0.1));
                 silence_selected.Points.Add(new System.Windows.Point(silence.debut, 0.9));
-                silence_selected.Points.Add(new System.Windows.Point((double)silence.fin, 0.9));
+                silence_selected.Points.Add(new System.Windows.Point(silence.debut, 0.1));
                 silence_selected.Points.Add(new System.Windows.Point((double)silence.fin, 0.1));
+                silence_selected.Points.Add(new System.Windows.Point((double)silence.fin, 0.9));
                 rectangles.Children.Add(silence_selected);
                 Canvas.SetTop(silence_selected, 0);
                 Canvas.SetLeft(silence_selected, 0);

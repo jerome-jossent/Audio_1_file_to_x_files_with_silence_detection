@@ -21,6 +21,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Windows.Threading;
 using NAudio.Wave;
 using System.Drawing;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace OneTrackToXTracks_SplitterAudio
 {
@@ -79,11 +80,14 @@ namespace OneTrackToXTracks_SplitterAudio
         void INITS()
         {
             _Title = Title;
-            file.Text = @"D:\Videos\Download Videos\MOBY - Amiga Days (Remasters Vol.1) [[FULL ALBUM]].mp3";
+
+
+
+            //file.Text = @"D:\Videos\Download Videos\MOBY - Amiga Days (Remasters Vol.1) [[FULL ALBUM]].mp3";
             //file.Text = @"D:\Ma musique\Musique\_CHIPTUNE\Best of Chiptune [8 bit music, retro visuals].mp3";
-            folder.Text = @"D:\Videos\Download Videos\TEST";
+            //folder.Text = @"D:\Videos\Download Videos\TEST";
             txt.Text = "Progressive Funk (Impact Inc. - Vectorball)\r\nPapoornoo2 (Apology - Demodisk 1)\r\nThe Last Knight (Alcatraz - Megademo IV)\r\nDragonsfunk (Angels - Copper Master)\r\nPelforth Blues (Alcatraz - Music Disk 1)\r\nThe Knight is Back (Alcatraz - Music Disk 1)\r\nKnulla Kuk (Quartex - Substance)\r\nLet there be Funk (Dreamdealers - Tales Of A Dream \r\nGroovy Thing (Dreamdealers - Innervision)\r\n88, Funky Avenue\r\nP.A.T.A.O.P.A.\r\nDrink My Pain Away (The Special Brothers - Live #1)\r\nKanyenamaryamalabar\r\nCortouchka !\r\nHeads Up (Alliance Design/DRD - Arkham Asylum)\r\nRaging Fire (Dreamdealers - Raging Fire)\r\nLivin' Insanity (Sanity - Arte)\r\nElekfunk (Sanity - Arte)\r\nMobyle (Sanity - Arte)\r\nMore Than Music (Alcatraz - More Than Music)";
-            author.Text = "MOBY";
+            //author.Text = "MOBY";
         }
 
         #region From UI
@@ -91,12 +95,33 @@ namespace OneTrackToXTracks_SplitterAudio
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             if (openFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
                 file.Text = openFileDialog.FileName;
-
-            GetInfo(false);
+                GetInfo(false);
+            }
         }
+
+
+        private void _silence_detection_sensitivity_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            GetInfo_2();
+
+        }
+
+        private void _silence_detection_mintime_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            GetInfo_2();
+
+        }
+
+        void SilenceDetectionCompute_Click(object sender, RoutedEventArgs e)
+        {
+            GetInfo_2();
+        }
+
         void CreateFolder_btn_Click(object sender, RoutedEventArgs e)
         {
+            if (file.Text == "") return;
             FileInfo fileInfo = new FileInfo(file.Text);
             string folder = fileInfo.DirectoryName;
             string filename = fileInfo.Name.Substring(0, fileInfo.Name.Length - fileInfo.Extension.Length);
@@ -127,7 +152,16 @@ namespace OneTrackToXTracks_SplitterAudio
         {
             if (e.AddedItems.Count == 0) return;
 
-            Silence_selected((Silence)e.AddedItems[0]);
+            if (e.AddedItems[0] is Silence)
+            {
+                Silence_selected((Silence)e.AddedItems[0]);
+            }
+            //if (e.AddedItems[0] is Pastille)
+            //{
+            //    Silence_selected((Silence)e.AddedItems[0]);
+            //}
+
+
         }
 
         void lbox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -141,7 +175,7 @@ namespace OneTrackToXTracks_SplitterAudio
         void ZoomBorder_MoveEvent(object sender, PanAndZoom.ZoomBorderEventArgs e)
         {
             if (data == null) return;
-            double y_relative = (e.mouseRelativeY - e.relativeoffsetY) / e.scaleY;
+            double y_relative = (e.mouseRelativeX - e.relativeoffsetX) / e.scaleX;
             y_time = y_relative * data.totaltime;
             TimeSpan t = TimeSpan.FromSeconds(y_time);
             string titre = _Title + " - " + t.ToString("G");
@@ -151,16 +185,28 @@ namespace OneTrackToXTracks_SplitterAudio
         void ZoomBorder_ZoomChangeEvent(object sender, ZoomBorderEventArgs args)
         {
             DrawOrUpdate_SilencesPastilles();
+            UpdateCursorThickness();
         }
 
         void ZoomBorder_MouseLeftButtonWithoutMoveEvent(object sender, ZoomBorderEventArgs args)
         {
-            PlayAudioHere();
+            if (NAudio_JJ.NAudio_JJ.isPlaying)
+                PlayAudioHere();
+            else
+                DrawOrUpdate_PlayCursor(y_time);
         }
 
         void GridZoom_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             DrawOrUpdate_SilencesPastilles();
+            UpdateCursorThickness();
+        }
+
+        private void UpdateCursorThickness()
+        {
+            if (sc != null && play_cursor_playing != null)
+                play_cursor_playing.StrokeThickness = rectangles.ActualWidth * 0.2 / (100 * sc.ScaleX);
+            //play_cursor_playing.StrokeThickness = rectangles.ActualHeight * 0.2 / (100 * sc.ScaleY);
         }
 
         void Silence_selected_delete(object sender, RoutedEventArgs e)
@@ -169,6 +215,24 @@ namespace OneTrackToXTracks_SplitterAudio
             List_Silences();
             ReDrawGraph();
         }
+
+
+        private void AudioPlayer_PLAY_Click(object sender, RoutedEventArgs e)
+        {
+            PlayAudioHere();
+        }
+
+        private void AudioPlayer_PAUSE_Click(object sender, RoutedEventArgs e)
+        {
+            NAudio_JJ.NAudio_JJ.AudioPlayer_Pause();
+
+        }
+
+        void AudioPlayer_STOP_Click(object sender, RoutedEventArgs e)
+        {
+            NAudio_JJ.NAudio_JJ.AudioPlayer_Stop();
+        }
+
         #endregion
 
         void GetInfo(bool usejsoninstead)
@@ -190,7 +254,6 @@ namespace OneTrackToXTracks_SplitterAudio
             {
                 data.peaks = Peak.Get_Peaks_FromJson(jsonfile);
                 _progressbar.Dispatcher.Invoke(new Action(() => { _progressbar.Value = 100; }));
-                GetInfo_2(data.peaks, ref data.silences, ref data.titles, data.totaltime);
             }
             else
             {
@@ -199,8 +262,8 @@ namespace OneTrackToXTracks_SplitterAudio
                 Peak.peakAnalysingEvent -= Peak_peakAnalysingEvent;
                 string jsonString = JsonSerializer.Serialize(data.peaks);
                 System.IO.File.WriteAllText(jsonfile, jsonString);
-                GetInfo_2(data.peaks, ref data.silences, ref data.titles, data.totaltime);
             }
+            GetInfo_2();
         }
 
         void Peak_peakAnalysingEvent(object sender, Peak.PeakAnalysingEventArgs e)
@@ -208,10 +271,18 @@ namespace OneTrackToXTracks_SplitterAudio
             Dispatcher.Invoke(new Action(() => { _progressbar.Value = e.Val; }), DispatcherPriority.Background, null);
         }
 
+        void GetInfo_2()
+        {
+            if (data == null) return;
+            GetInfo_2(data.peaks, ref data.silences, ref data.titles, data.totaltime);
+        }
+
         void GetInfo_2(List<Peak> peaks, ref List<Silence> silences, ref List<Title> titles, double totaltime_sec)
         {
             //get silences
-            silences = Silence.Get_Silences(peaks, 0.005, 0.2);
+            silences = Silence.Get_Silences(peaks,
+                                            (double)_silence_detection_sensitivity.Value,
+                                            (double)_silence_detection_mintime.Value);
 
             TracksFinder(silences, ref titles);
 
@@ -224,7 +295,7 @@ namespace OneTrackToXTracks_SplitterAudio
                 //delete silence 1
                 silences.RemoveAt(0);
             }
-            if ((double)silences[silences.Count - 1].fin >= totaltime_sec)
+            if (titles.Count > 1 && (double)silences[silences.Count - 1].fin >= totaltime_sec)
             {
                 //change piste n
                 titles[titles.Count - 1].end = TimeSpan.FromSeconds(silences[silences.Count - 1].debut);
@@ -240,11 +311,12 @@ namespace OneTrackToXTracks_SplitterAudio
         void PlayAudioHere()
         {
             NAudio_JJ.NAudio_JJ.playerPlayingEvent += NAudio_JJ_playerPlayingEvent; ;
-            NAudio_JJ.NAudio_JJ.PlayAudio(file.Text, y_time, data.totaltime);
+            NAudio_JJ.NAudio_JJ.AudioPlayer_Play(file.Text, y_time, data.totaltime);
         }
 
         private void NAudio_JJ_playerPlayingEvent(object sender, NAudio_JJ.NAudio_JJ.PlayerPlayingEventArgs e)
         {
+            y_time = e.Val;
             Dispatcher.Invoke(() =>
             {
                 DrawOrUpdate_PlayCursor(e.Val);
@@ -457,8 +529,10 @@ namespace OneTrackToXTracks_SplitterAudio
                 // Create the rectangle
                 System.Windows.Shapes.Rectangle rec = new System.Windows.Shapes.Rectangle()
                 {
-                    Width = 1,// rectangles.Width,
-                    Height = titre.end.TotalSeconds - titre.start.TotalSeconds,
+                    Width = titre.end.TotalSeconds - titre.start.TotalSeconds,// rectangles.Width,
+                    //Width = 1,// rectangles.Width,
+                    //Height = titre.end.TotalSeconds - titre.start.TotalSeconds,
+                    Height = 1,
                     Fill = titre.brush,
                     Stroke = System.Windows.Media.Brushes.Black,
                     StrokeThickness = 0,
@@ -470,8 +544,8 @@ namespace OneTrackToXTracks_SplitterAudio
                 {
                     rectangles.Children.Add(rec);
                     System.Windows.Controls.Panel.SetZIndex(rec, (int)ZLevelOnCanvas.tracks);
-                    Canvas.SetTop(rec, titre.start.TotalSeconds);
-                    Canvas.SetLeft(rec, 0);
+                    Canvas.SetTop(rec, 0);
+                    Canvas.SetLeft(rec, titre.start.TotalSeconds);
                 }));
             }
         }
@@ -481,13 +555,13 @@ namespace OneTrackToXTracks_SplitterAudio
             //dessine le niveau sonore = f(temps)
             sound_peaks = new Polygon();
             sound_peaks.Fill = new SolidColorBrush(color);
-            sound_peaks.Points.Add(new System.Windows.Point(0, 0));
+            sound_peaks.Points.Add(new System.Windows.Point(0, 1));
 
             for (int i = 0; i < data.peaks.Count; i++)
-                sound_peaks.Points.Add(new System.Windows.Point(data.peaks[i].amplitude, data.peaks[i].temps));
+                sound_peaks.Points.Add(new System.Windows.Point(data.peaks[i].temps, 1-data.peaks[i].amplitude));
 
-            sound_peaks.Points.Add(new System.Windows.Point(0, data.totaltime));
-            sound_peaks.Points.Add(new System.Windows.Point(0, 0));
+            sound_peaks.Points.Add(new System.Windows.Point(data.totaltime, 1));
+            sound_peaks.Points.Add(new System.Windows.Point(0, 1));
 
             //positionnement du dessin
             rectangles.Children.Add(sound_peaks);
@@ -495,7 +569,8 @@ namespace OneTrackToXTracks_SplitterAudio
             Canvas.SetTop(sound_peaks, 0);
             Canvas.SetLeft(sound_peaks, 0);
 
-            rectangles.Height = data.totaltime;
+            rectangles.Width = data.totaltime;
+            //rectangles.Height = data.totaltime;
         }
 
         void Draw_Silences(System.Windows.Media.Color color)
@@ -503,22 +578,33 @@ namespace OneTrackToXTracks_SplitterAudio
             //dessine des traits à chaque silence = f(temps)
             sound_silences = new Polygon();
             sound_silences.Fill = new SolidColorBrush(color);
-            sound_silences.Points.Add(new System.Windows.Point(1, 0));
+            //sound_silences.Points.Add(new System.Windows.Point(1, 0));
+            sound_silences.Points.Add(new System.Windows.Point(0, 1));
 
             double X, Y;
             foreach (Silence silence in data.silences)
             {
-                X = 1;
-                Y = silence.debut;
+                X = silence.debut;
+                Y = 1;
                 sound_silences.Points.Add(new System.Windows.Point(X, Y));
-                X = 0.1;
+                Y = 0.1;
                 sound_silences.Points.Add(new System.Windows.Point(X, Y));
-                Y = (double)silence.fin;
+                X = (double)silence.fin;
                 sound_silences.Points.Add(new System.Windows.Point(X, Y));
-                X = 1;
+                Y = 1;
                 sound_silences.Points.Add(new System.Windows.Point(X, Y));
+                //X = 1;
+                //Y = silence.debut;
+                //sound_silences.Points.Add(new System.Windows.Point(X, Y));
+                //X = 0.1;
+                //sound_silences.Points.Add(new System.Windows.Point(X, Y));
+                //Y = (double)silence.fin;
+                //sound_silences.Points.Add(new System.Windows.Point(X, Y));
+                //X = 1;
+                //sound_silences.Points.Add(new System.Windows.Point(X, Y));
             }
-            sound_silences.Points.Add(new System.Windows.Point(1, 0));
+            //sound_silences.Points.Add(new System.Windows.Point(1, 0));
+            sound_silences.Points.Add(new System.Windows.Point(0, 1));
 
             //positionnement du dessin
             rectangles.Children.Add(sound_silences);
@@ -526,7 +612,8 @@ namespace OneTrackToXTracks_SplitterAudio
             Canvas.SetTop(sound_silences, 0);
             Canvas.SetLeft(sound_silences, 0);
 
-            rectangles.Height = data.totaltime;
+            rectangles.Width = data.totaltime;
+            //rectangles.Height = data.totaltime;
         }
 
         TranslateTransform st;
@@ -559,11 +646,16 @@ namespace OneTrackToXTracks_SplitterAudio
                 }
             }
 
-            double rectangles_W_abs = rectangles.ActualWidth / sc.ScaleX;
+            double rectangles_W_abs = data.totaltime / sc.ScaleX;
             //double rectangles_H_abs = rectangles.ActualHeight / sc.ScaleY;
-            double rectangles_H_abs = data.totaltime / sc.ScaleY;
-            double fixedwidth_prct = 0.03 * zoomBorder.ActualHeight / zoomBorder.ActualWidth;
-            double fixedheight_prct = fixedwidth_prct * zoomBorder.ActualWidth / zoomBorder.ActualHeight;
+            double rectangles_H_abs = rectangles.ActualHeight / sc.ScaleY;
+            double fixedheight_prct = 0.03 * zoomBorder.ActualWidth / zoomBorder.ActualHeight;
+            double fixedwidth_prct = fixedheight_prct * zoomBorder.ActualHeight / zoomBorder.ActualWidth;
+            //double rectangles_W_abs = rectangles.ActualWidth / sc.ScaleX;
+            ////double rectangles_H_abs = rectangles.ActualHeight / sc.ScaleY;
+            //double rectangles_H_abs = data.totaltime / sc.ScaleY;
+            //double fixedwidth_prct = 0.03 * zoomBorder.ActualHeight / zoomBorder.ActualWidth;
+            //double fixedheight_prct = fixedwidth_prct * zoomBorder.ActualWidth / zoomBorder.ActualHeight;
 
             //mis à jour du positionnement des pastilles
             foreach (var item in silences_pastille)
@@ -574,8 +666,10 @@ namespace OneTrackToXTracks_SplitterAudio
                 pastille.Width = rectangles_W_abs * fixedwidth_prct;
                 pastille.Height = rectangles_H_abs * fixedheight_prct;
 
-                double top = silence.milieu - pastille.Height / 2;
-                double left = rectangles.Width - pastille.Width;
+                //double top = silence.milieu - pastille.Height / 2;
+                //double left = rectangles.Width - pastille.Width;
+                double top = rectangles.Height - pastille.Height;
+                double left = silence.milieu - pastille.Width / 2;
 
                 //met les nouvelles pastilles derrières les anciennes;
                 System.Windows.Controls.Panel.SetZIndex(pastille, pastille._zindex);
@@ -597,8 +691,8 @@ namespace OneTrackToXTracks_SplitterAudio
             if (play_cursor_playing == null)
             {
                 play_cursor_playing = new Polyline();
-                play_cursor_playing.Points.Add(new System.Windows.Point(0, val));
-                play_cursor_playing.Points.Add(new System.Windows.Point(1, val));
+                play_cursor_playing.Points.Add(new System.Windows.Point(val,0));
+                play_cursor_playing.Points.Add(new System.Windows.Point(val,1));
                 play_cursor_playing.Stroke = new SolidColorBrush(play_cursor_playing_color);
                 rectangles.Children.Add(play_cursor_playing);
                 Canvas.SetTop(play_cursor_playing, 0);
@@ -607,10 +701,10 @@ namespace OneTrackToXTracks_SplitterAudio
             }
             else
             {
-                play_cursor_playing.Points[0] = new System.Windows.Point(0, val);
-                play_cursor_playing.Points[1] = new System.Windows.Point(1, val);
+                play_cursor_playing.Points[0] = new System.Windows.Point(val,0);
+                play_cursor_playing.Points[1] = new System.Windows.Point(val,1);
             }
-            play_cursor_playing.StrokeThickness = rectangles.ActualHeight * 0.2 / 100 * 1/ sc.ScaleY;
+            UpdateCursorThickness();
         }
 
         void Title_selected(Title title)
@@ -630,10 +724,10 @@ namespace OneTrackToXTracks_SplitterAudio
             {
                 silence_selected = new Polygon();
                 silence_selected.Fill = new SolidColorBrush(System.Windows.Media.Colors.Red);
-                silence_selected.Points.Add(new System.Windows.Point(0.1, silence.debut));
-                silence_selected.Points.Add(new System.Windows.Point(0.9, silence.debut));
-                silence_selected.Points.Add(new System.Windows.Point(0.9, (double)silence.fin));
-                silence_selected.Points.Add(new System.Windows.Point(0.1, (double)silence.fin));
+                silence_selected.Points.Add(new System.Windows.Point(silence.debut, 0.1));
+                silence_selected.Points.Add(new System.Windows.Point(silence.debut, 0.9));
+                silence_selected.Points.Add(new System.Windows.Point((double)silence.fin, 0.9));
+                silence_selected.Points.Add(new System.Windows.Point((double)silence.fin, 0.1));
                 rectangles.Children.Add(silence_selected);
                 Canvas.SetTop(silence_selected, 0);
                 Canvas.SetLeft(silence_selected, 0);

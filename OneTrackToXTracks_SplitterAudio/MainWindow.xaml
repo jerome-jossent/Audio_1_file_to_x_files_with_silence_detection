@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:OneTrackToXTracks_SplitterAudio"
         
+                xmlns:toolkit="http://schemas.xceed.com/wpf/xaml/toolkit"
                 xmlns:local2="clr-namespace:PanAndZoom"
-
         
         mc:Ignorable="d"
         Title="OneTrackToXTracks" Height="800" Width="1500"
@@ -39,34 +39,73 @@
                     <RowDefinition Height="auto"/>
                     <RowDefinition Height="auto"/>
                     <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
                 </Grid.RowDefinitions>
                 
                 <Label Grid.Row="0" Grid.Column="0" Content="Source file" HorizontalAlignment="Left"  Height="33" VerticalAlignment="Top" />
                 <Button Grid.Row="0" Grid.Column="1"  Margin="5" Click="SelectFile_btn_Click" Content="Select file in" ToolTip="Select file in"/>
                 <TextBox Grid.Row="0" Grid.Column="2" x:Name="file" Height="23" VerticalAlignment="Center" VerticalContentAlignment="Center" />
 
-                <Label Grid.Row="1" Grid.Column="0" Content="Analyse file" HorizontalAlignment="Left"  Height="33" VerticalAlignment="Top" />
-                <StackPanel Grid.Row="1" Grid.Column="1" Margin="5"  Orientation="Horizontal" >
-                    <Button Margin="5" IsEnabled="False" Click="AnalyseFileFromJSON_btn_Click" Content="Load Analyse file" ToolTip="Analyse file"/>
-                    <Button Margin="5" IsEnabled="False" Click="AnalyseFile_btn_Click" Content="Analyse file" ToolTip="Analyse file"/>
-                </StackPanel>
+                <Label Grid.Row="1" Grid.Column="0" Content="Get : Amplitude = f(t)" HorizontalAlignment="Left"  Height="33" VerticalAlignment="Top" />
                 <ProgressBar Grid.Row="1" Grid.Column="2" Height="15" x:Name="_progressbar" Minimum="0" Maximum="100" />
 
-                <Label Grid.Row="2" Grid.Column="0" Content="Destination folder"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
-                <StackPanel Grid.Row="2" Grid.Column="1" Margin="5"  Orientation="Horizontal" >
+                <Grid Grid.Row="2" Grid.ColumnSpan="3" >
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="auto"/>
+                        <ColumnDefinition Width="auto"/>
+                        <ColumnDefinition Width="auto"/>
+                        <ColumnDefinition Width="auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Label Grid.Row="0" Grid.Column="0" Content="Silences detection"/>
+                    <Label Grid.Row="0" Grid.Column="1" Content="Sensitivity (%)"/>
+                    <toolkit:DoubleUpDown Grid.Row="0" Grid.Column="2" Width="70" x:Name="_silence_detection_sensitivity" ValueChanged="_silence_detection_sensitivity_ValueChanged" Minimum="0.000001" Maximum="1" Value="0.005" Increment="0.001" />
+
+                    <Label Grid.Row="1" Grid.Column="1" Content="Minimum silence time (sec)"/>
+                    <toolkit:DoubleUpDown Grid.Row="1" Grid.Column="2" Width="70" x:Name="_silence_detection_mintime" ValueChanged="_silence_detection_mintime_ValueChanged" Minimum="0.000001" Value="0.2" Increment="0.01" />
+
+                    <!--<Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="3" Margin="5" Content="Recompute" Click="SilenceDetectionCompute_Click" />-->
+                </Grid>
+                
+                <Label Grid.Row="3" Grid.Column="0" Content="Destination folder"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
+                <StackPanel Grid.Row="3" Grid.Column="1" Margin="5"  Orientation="Horizontal" >
                     <Button Margin="5" Click="CreateFolder_btn_Click" Content="AutoCreate folder" ToolTip="Create from title a new folder"/>
                     <Button Margin="5" Click="SelectFolder_btn_Click" Content="Select folder out" ToolTip="Select folder out"/>
                 </StackPanel>
-                <TextBox Grid.Row="2" Grid.Column="2" x:Name="folder" Height="23" VerticalAlignment="Center" VerticalContentAlignment="Center" />
+                <TextBox Grid.Row="3" Grid.Column="2" x:Name="folder" Height="23" VerticalAlignment="Center" VerticalContentAlignment="Center" />
 
-                <TextBox Grid.Row="3" Grid.Column="2" x:Name="author" Height="23" VerticalAlignment="Center" VerticalContentAlignment="Center" />
-                <Label Grid.Row="3" Grid.Column="0" Content="Author"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
+                <TextBox Grid.Row="4" Grid.Column="2" x:Name="author" Height="23" VerticalAlignment="Center" VerticalContentAlignment="Center" />
+                <Label Grid.Row="4" Grid.Column="0" Content="Author"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
 
-                <TextBox Grid.Row="4" Grid.Column="2" x:Name="album" Height="23" VerticalAlignment="Center" VerticalContentAlignment="Center" />
-                <Label Grid.Row="4" Grid.Column="0" Content="Album"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
+                <TextBox Grid.Row="5" Grid.Column="2" x:Name="album" Height="23" VerticalAlignment="Center" VerticalContentAlignment="Center" />
+                <Label Grid.Row="5" Grid.Column="0" Content="Album"  HorizontalAlignment="Left" Height="33" VerticalAlignment="Top"/>
 
                 <!--<Image Grid.Row="2" Grid.Column="2" Height="30" Width="30" Margin="5,0" MouseDown="SelectFile_Click" Source="/Resources/file.png"/>
                 <Image Grid.Row="3" Grid.Column="2" Height="30" Width="30" Margin="5,0" MouseDown="SelectFolder_Click" Source="/Resources/folder.png"/>-->
+
+                
+                <!--PLAYER-->
+                <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="PLAY" Width="50" Margin="5" Click="AudioPlayer_PLAY_Click"/>
+                    <Button Content="PAUSE" Width="50" Margin="5" Click="AudioPlayer_PAUSE_Click"/>
+                    <Button Content="STOP" Width="50" Margin="5" Click="AudioPlayer_STOP_Click"/>
+                </StackPanel>
+
+                <Grid Grid.Row="7" Grid.ColumnSpan="3" SizeChanged="GridZoom_SizeChanged" Height="100">
+                    <local2:ZoomBorder x:Name="zoomBorder" ClipToBounds="True" Background="Gray">
+                        <Grid>
+                            <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox">
+                                <Canvas x:Name="rectangles" ClipToBounds="True" Height="1" Width="1"/>
+                            </Viewbox>
+                        </Grid>
+                    </local2:ZoomBorder>
+                </Grid>
 
 
             </Grid>
@@ -76,16 +115,6 @@
                 <Button Margin="5" Height="50" Width="50" Click="Go_btn_Click" Content="GO" IsEnabled="{Binding _ready_to_Process}" />
             </StackPanel>
 
-            <!--<Image Grid.Column="1" Margin="5" Height="50" Width="50" MouseDown="Go_Click">
-                <Image.Source>
-                    <BitmapImage UriSource="/Resources/Lecture.png" />
-                </Image.Source>
-            </Image>
-            <Image Grid.Column="1" Margin="5" Height="50" Width="50" x:Name="Computing" Visibility="Hidden">
-                <Image.Source>
-                    <BitmapImage UriSource="/Resources/Stop.png" />
-                </Image.Source>
-            </Image>-->
         </Grid>
 
         <!--Texte avec durée, pistes-->
@@ -108,7 +137,7 @@
             <TextBox Grid.Column="0" Grid.Row="1" x:Name="txt" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"  />
 
             <TextBlock Grid.Column="2" Grid.Row="0" Text="Peaks and Silences" />
-            <Grid Grid.Column="2" Grid.Row="1" SizeChanged="GridZoom_SizeChanged" >
+            <!--<Grid Grid.Column="2" Grid.Row="1" SizeChanged="GridZoom_SizeChanged" >
                 <local2:ZoomBorder x:Name="zoomBorder" ClipToBounds="True" Background="Gray">
                     <Grid>
                         <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox">
@@ -116,7 +145,7 @@
                         </Viewbox>
                     </Grid>
                 </local2:ZoomBorder>
-            </Grid>
+            </Grid>-->
             <GridSplitter Grid.Column="3" Grid.RowSpan="2"
               HorizontalAlignment="Stretch"
               VerticalAlignment="Stretch"

@@ -217,6 +217,7 @@ namespace NAudio_JJ
     {
         public static double MusicTotalSeconds(string path)
         {
+            if (!System.IO.File.Exists(path)) return 0;
             TimeSpan time;
             using (Mp3FileReader reader = new Mp3FileReader(path))
                 time = reader.TotalTime;
@@ -256,12 +257,12 @@ namespace NAudio_JJ
         static System.Timers.Timer audioPlayerTimer;
         static DateTime endtime;
         static double _start_secondes;
+        internal static bool isPlaying;
 
-        public static void PlayAudio(string path, double start_secondes, double end_secondes)
+        public static void AudioPlayer_Play(string path, double start_secondes, double end_secondes)
         {
             Mp3FileReader reader = new Mp3FileReader(path);
-            if (audioPlayer != null)
-                audioPlayer.Stop();
+            AudioPlayer_Stop();
 
             audioPlayer = new WaveOut();
 
@@ -284,6 +285,7 @@ namespace NAudio_JJ
             audioPlayerTimer.Elapsed += new System.Timers.ElapsedEventHandler(OnDummyTimerFired);
             audioPlayerTimer.AutoReset = true;
 
+            isPlaying = true;
             audioPlayer.Play();
             audioPlayerTimer.Start();
         }
@@ -322,6 +324,24 @@ namespace NAudio_JJ
             }
 
             playerPlayingEvent?.Invoke(null, new PlayerPlayingEventArgs(val));
+        }
+
+        internal static void AudioPlayer_Stop()
+        {
+            if (audioPlayer != null)
+            {
+                audioPlayer.Stop();
+                isPlaying = false;
+            }
+        }
+
+        internal static void AudioPlayer_Pause()
+        {
+            if (audioPlayer != null)
+            {
+                audioPlayer.Pause();
+                isPlaying = false;
+            }
         }
     }
 }

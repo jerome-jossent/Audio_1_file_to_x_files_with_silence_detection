@@ -19,6 +19,7 @@ using TagLib;
 using System.Xml.Linq;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Windows.Threading;
+using NAudio.Wave;
 
 namespace OneTrackToXTracks_SplitterAudio
 {
@@ -52,6 +53,8 @@ namespace OneTrackToXTracks_SplitterAudio
         Polygon sound_silences;
         Polygon silence_selected;
 
+        double y_time;
+
         public enum ZLevelOnCanvas { tracks = 0, peaks = 3, silences = 5, pastilles = 1000 }
 
         public MainWindow()
@@ -62,11 +65,11 @@ namespace OneTrackToXTracks_SplitterAudio
 
         void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            data = new DATA();
             INITS();
             //GetInfo();
             ZoomBorder.MoveEvent += ZoomBorder_MoveEvent;
             ZoomBorder.ZoomChangeEvent += ZoomBorder_ZoomChangeEvent;
+            ZoomBorder.MouseLeftButtonWithoutMoveEvent += ZoomBorder_MouseLeftButtonWithoutMoveEvent;
             //PreProcess();
         }
 
@@ -87,6 +90,7 @@ namespace OneTrackToXTracks_SplitterAudio
             if (openFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 file.Text = openFileDialog.FileName;
 
+            GetInfo(false);
         }
         void CreateFolder_btn_Click(object sender, RoutedEventArgs e)
         {
@@ -113,7 +117,6 @@ namespace OneTrackToXTracks_SplitterAudio
             GetInfo(false);
         }
 
-
         void PreProcess_btn_Click(object sender, RoutedEventArgs e) { PreProcess(); }
         void Go_btn_Click(object sender, RoutedEventArgs e) { Process(); }
 
@@ -134,8 +137,9 @@ namespace OneTrackToXTracks_SplitterAudio
 
         void ZoomBorder_MoveEvent(object sender, PanAndZoom.ZoomBorderEventArgs e)
         {
+            if(data==null) return;
             double y_relative = (e.mouseRelativeY - e.relativeoffsetY) / e.scaleY;
-            double y_time = y_relative * data.totaltime;
+            y_time = y_relative * data.totaltime;
             TimeSpan t = TimeSpan.FromSeconds(y_time);
             string titre = _Title + " - " + t.ToString("G");
             Dispatcher.BeginInvoke(() => (Title = titre));
@@ -144,6 +148,11 @@ namespace OneTrackToXTracks_SplitterAudio
         void ZoomBorder_ZoomChangeEvent(object sender, ZoomBorderEventArgs args)
         {
             DrawOrUpdate_SilencesPastilles();
+        }
+
+        void ZoomBorder_MouseLeftButtonWithoutMoveEvent(object sender, ZoomBorderEventArgs args)
+        {
+            PlayAudioHere();
         }
 
         void GridZoom_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -161,6 +170,9 @@ namespace OneTrackToXTracks_SplitterAudio
 
         void GetInfo(bool usejsoninstead)
         {
+            //reset data
+            data = new DATA();
+
             //Read musiquefile
             data.totaltime = NAudio_JJ.NAudio_JJ.MusicTotalSeconds(file.Text);
 
@@ -220,6 +232,15 @@ namespace OneTrackToXTracks_SplitterAudio
             List_Titles();
             List_Silences();
             ReDrawGraph();
+        }
+
+        void PlayAudioHere()
+        {
+            NAudio_JJ.NAudio_JJ.PlayAudio(file.Text,
+                    y_time,
+                    data.totaltime);
+
+
         }
 
         void PreProcess()
@@ -405,8 +426,13 @@ namespace OneTrackToXTracks_SplitterAudio
         {
             previousPastilleSelected?._FocusLost();
             ListBoxItem it = (ListBoxItem)sender;
-            previousPastilleSelected = silences_pastille[listitems_silence[it]];
-            previousPastilleSelected._Focus();
+
+            if (listitems_silence.ContainsKey(it))
+                if (silences_pastille.ContainsKey(listitems_silence[it]))
+                {
+                    previousPastilleSelected = silences_pastille[listitems_silence[it]];
+                    previousPastilleSelected._Focus();
+                }
         }
 
         void Draw_Titles()
@@ -521,7 +547,8 @@ namespace OneTrackToXTracks_SplitterAudio
             }
 
             double rectangles_W_abs = rectangles.ActualWidth / sc.ScaleX;
-            double rectangles_H_abs = rectangles.ActualHeight / sc.ScaleY;
+            //double rectangles_H_abs = rectangles.ActualHeight / sc.ScaleY;
+            double rectangles_H_abs = data.totaltime / sc.ScaleY;
             double fixedwidth_prct = 0.03 * zoomBorder.ActualHeight / zoomBorder.ActualWidth;
             double fixedheight_prct = fixedwidth_prct * zoomBorder.ActualWidth / zoomBorder.ActualHeight;
 

@@ -15,7 +15,7 @@ namespace PanAndZoom
         Point start;
 
         bool X_fixed = true;
-
+        bool hasMoved = false;
         TranslateTransform translateTransform = null;
         ScaleTransform scaleTransform = null;
 
@@ -168,6 +168,7 @@ namespace PanAndZoom
 
                 this.Cursor = Cursors.Hand;
                 child.CaptureMouse();
+                hasMoved = false;
             }
         }
 
@@ -177,6 +178,11 @@ namespace PanAndZoom
             {
                 child.ReleaseMouseCapture();
                 this.Cursor = Cursors.Arrow;
+
+                if (!hasMoved)
+                {
+                    MouseLeftButtonWithoutMoveEvent?.Invoke(this, null);
+                }
             }
         }
 
@@ -190,6 +196,9 @@ namespace PanAndZoom
 
         public delegate void ZoomChangeEventHandler(object sender, ZoomBorderEventArgs args);
         public static event ZoomChangeEventHandler ZoomChangeEvent;
+
+        public delegate void MouseLeftButtonWithoutMoveEventHandler(object sender, ZoomBorderEventArgs args);
+        public static event MouseLeftButtonWithoutMoveEventHandler MouseLeftButtonWithoutMoveEvent;
 
         private void child_MouseMove(object sender, MouseEventArgs e)
         {
@@ -205,6 +214,7 @@ namespace PanAndZoom
                         tt.X = origin.X - v.X;
 
                     tt.Y = origin.Y - v.Y;
+                    hasMoved = true;
 
                 }
                 // Point mouse2 = e.GetPosition(this);

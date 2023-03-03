@@ -4,11 +4,16 @@ using OneTrackToXTracks_SplitterAudio;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+using TagLib;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace NAudio_JJ
 {
@@ -246,6 +251,26 @@ namespace NAudio_JJ
 
                 _fs.Close();
             }
+        }
+
+
+        static WaveOut waveOut;
+        public static void PlayAudio(string path, double start_secondes, double end_secondes)
+        {
+            Mp3FileReader reader = new Mp3FileReader(path);
+            if (waveOut != null)
+                waveOut.Stop();
+
+            waveOut = new WaveOut();
+            Mp3Frame mp3Frame = reader.ReadNextFrame();
+            while (mp3Frame != null)
+            {
+                if (reader.CurrentTime.TotalSeconds >= start_secondes)
+                    break;
+                mp3Frame = reader.ReadNextFrame();
+            }
+            waveOut.Init(reader);
+            waveOut.Play();
         }
 
     }

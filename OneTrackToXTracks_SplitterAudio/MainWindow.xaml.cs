@@ -238,7 +238,8 @@ namespace OneTrackToXTracks_SplitterAudio
         {
             NAudio_JJ.NAudio_JJ.PlayAudio(file.Text,
                     y_time,
-                    data.totaltime);
+                    y_time+2);
+                    //data.totaltime);
 
 
         }

@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using System.Windows.Controls;
 using TagLib;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
@@ -247,21 +248,23 @@ namespace NAudio_JJ
                     if (reader.CurrentTime.TotalSeconds > end_secondes)
                         break;
                 }
-
-
                 _fs.Close();
             }
         }
 
 
-        static WaveOut waveOut;
+        static WaveOut audioPlayer;
+        static System.Timers.Timer audioPlayerStop;
+
         public static void PlayAudio(string path, double start_secondes, double end_secondes)
         {
             Mp3FileReader reader = new Mp3FileReader(path);
-            if (waveOut != null)
-                waveOut.Stop();
+            if (audioPlayer != null)
+                audioPlayer.Stop();
 
-            waveOut = new WaveOut();
+            audioPlayer = new WaveOut();
+
+            //passe les premières secondes
             Mp3Frame mp3Frame = reader.ReadNextFrame();
             while (mp3Frame != null)
             {
@@ -269,9 +272,24 @@ namespace NAudio_JJ
                     break;
                 mp3Frame = reader.ReadNextFrame();
             }
-            waveOut.Init(reader);
-            waveOut.Play();
-        }
+            audioPlayer.Init(reader);
 
+            audioPlayer.Play();
+            int millisToWait = (int)(1000 * (end_secondes - start_secondes));
+            //            System.Threading.Thread.Sleep(millisToWait);
+            //            waveOut.Stop();
+
+            audioPlayerStop = new System.Timers.Timer(millisToWait); // 5 sec interval
+            audioPlayerStop.Enabled = true;
+            audioPlayerStop.Elapsed += new System.Timers.ElapsedEventHandler(OnDummyTimerFired);
+            audioPlayerStop.AutoReset = false;
+
+            audioPlayerStop.Start();
+        }
+        private static void OnDummyTimerFired(object? sender, ElapsedEventArgs e)
+        {
+            audioPlayer.Stop();
+            audioPlayerStop.Elapsed -= new System.Timers.ElapsedEventHandler(OnDummyTimerFired);
+        }
     }
 }

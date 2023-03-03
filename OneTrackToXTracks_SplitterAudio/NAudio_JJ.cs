@@ -1,4 +1,5 @@
-﻿using NAudio.Wave;
+﻿using NAudio.Utils;
+using NAudio.Wave;
 using NAudio.WaveFormRenderer;
 using OneTrackToXTracks_SplitterAudio;
 using System;
@@ -38,8 +39,6 @@ namespace NAudio_JJ
 
 
         public delegate void PeakAnalysingHandler(object sender, PeakAnalysingEventArgs e);
-
-        // Declare the event.
         public static event PeakAnalysingHandler peakAnalysingEvent;
 
         public class PeakAnalysingEventArgs
@@ -254,7 +253,9 @@ namespace NAudio_JJ
 
 
         static WaveOut audioPlayer;
-        static System.Timers.Timer audioPlayerStop;
+        static System.Timers.Timer audioPlayerTimer;
+        static DateTime endtime;
+        static double _start_secondes;
 
         public static void PlayAudio(string path, double start_secondes, double end_secondes)
         {
@@ -274,22 +275,53 @@ namespace NAudio_JJ
             }
             audioPlayer.Init(reader);
 
+            double secToWait = end_secondes - start_secondes;
+
+            endtime = DateTime.Now + TimeSpan.FromSeconds(secToWait);
+            _start_secondes = start_secondes;
+            audioPlayerTimer = new System.Timers.Timer(100);
+            audioPlayerTimer.Enabled = true;
+            audioPlayerTimer.Elapsed += new System.Timers.ElapsedEventHandler(OnDummyTimerFired);
+            audioPlayerTimer.AutoReset = true;
+
             audioPlayer.Play();
-            int millisToWait = (int)(1000 * (end_secondes - start_secondes));
-            //            System.Threading.Thread.Sleep(millisToWait);
-            //            waveOut.Stop();
-
-            audioPlayerStop = new System.Timers.Timer(millisToWait); // 5 sec interval
-            audioPlayerStop.Enabled = true;
-            audioPlayerStop.Elapsed += new System.Timers.ElapsedEventHandler(OnDummyTimerFired);
-            audioPlayerStop.AutoReset = false;
-
-            audioPlayerStop.Start();
+            audioPlayerTimer.Start();
         }
+
+        public delegate void PlayerPlayingHandler(object sender, PlayerPlayingEventArgs e);
+        public static event PlayerPlayingHandler playerPlayingEvent;
+
+        public class PlayerPlayingEventArgs
+        {
+            public PlayerPlayingEventArgs(double val) { Val = val; }
+            public double Val { get; }
+        }
+
         private static void OnDummyTimerFired(object? sender, ElapsedEventArgs e)
         {
-            audioPlayer.Stop();
-            audioPlayerStop.Elapsed -= new System.Timers.ElapsedEventHandler(OnDummyTimerFired);
+            if (DateTime.Now >= endtime)
+            {
+                audioPlayer.Stop();
+                audioPlayerTimer.Elapsed -= new System.Timers.ElapsedEventHandler(OnDummyTimerFired);
+
+                //désabonnement forcé des abonnés
+                foreach (var abonne in playerPlayingEvent.GetInvocationList())
+                {
+                    string bob = abonne.Target.ToString();
+                }
+            }
+
+            double val = 0;
+            try
+            {
+                val = audioPlayer.GetPositionTimeSpan().TotalSeconds + _start_secondes;
+            }
+            catch (Exception ex)
+            {
+                //throw;
+            }
+
+            playerPlayingEvent?.Invoke(null, new PlayerPlayingEventArgs(val));
         }
     }
 }

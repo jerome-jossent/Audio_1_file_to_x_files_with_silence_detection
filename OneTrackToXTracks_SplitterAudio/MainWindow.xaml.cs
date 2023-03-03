@@ -20,6 +20,7 @@ using System.Xml.Linq;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Windows.Threading;
 using NAudio.Wave;
+using System.Drawing;
 
 namespace OneTrackToXTracks_SplitterAudio
 {
@@ -52,10 +53,12 @@ namespace OneTrackToXTracks_SplitterAudio
         Polygon sound_peaks;
         Polygon sound_silences;
         Polygon silence_selected;
+        Polyline play_cursor_playing;
+        System.Windows.Media.Color play_cursor_playing_color = System.Windows.Media.Colors.White;
 
         double y_time;
 
-        public enum ZLevelOnCanvas { tracks = 0, peaks = 3, silences = 5, pastilles = 1000 }
+        public enum ZLevelOnCanvas { tracks = 0, peaks = 3, silences = 5, pastilles = 1000, cursor = 2000 }
 
         public MainWindow()
         {
@@ -137,7 +140,7 @@ namespace OneTrackToXTracks_SplitterAudio
 
         void ZoomBorder_MoveEvent(object sender, PanAndZoom.ZoomBorderEventArgs e)
         {
-            if(data==null) return;
+            if (data == null) return;
             double y_relative = (e.mouseRelativeY - e.relativeoffsetY) / e.scaleY;
             y_time = y_relative * data.totaltime;
             TimeSpan t = TimeSpan.FromSeconds(y_time);
@@ -236,12 +239,16 @@ namespace OneTrackToXTracks_SplitterAudio
 
         void PlayAudioHere()
         {
-            NAudio_JJ.NAudio_JJ.PlayAudio(file.Text,
-                    y_time,
-                    y_time+2);
-                    //data.totaltime);
+            NAudio_JJ.NAudio_JJ.playerPlayingEvent += NAudio_JJ_playerPlayingEvent; ;
+            NAudio_JJ.NAudio_JJ.PlayAudio(file.Text, y_time, data.totaltime);
+        }
 
-
+        private void NAudio_JJ_playerPlayingEvent(object sender, NAudio_JJ.NAudio_JJ.PlayerPlayingEventArgs e)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                DrawOrUpdate_PlayCursor(e.Val);
+            });
         }
 
         void PreProcess()
@@ -263,11 +270,15 @@ namespace OneTrackToXTracks_SplitterAudio
                 var item = rectangles.Children[i];
                 if (item is Pastille)
                     continue;
+
+                if (item == play_cursor_playing)
+                    continue;
+
                 rectangles.Children.RemoveAt(i);
                 i--;
             }
             Draw_Titles();
-            Draw_Peaks(Color.FromRgb(40, 40, 40));
+            Draw_Peaks(System.Windows.Media.Color.FromRgb(40, 40, 40));
             Draw_Silences(Colors.White);
 
             DrawOrUpdate_SilencesPastilles();
@@ -446,7 +457,7 @@ namespace OneTrackToXTracks_SplitterAudio
                 // Create the rectangle
                 System.Windows.Shapes.Rectangle rec = new System.Windows.Shapes.Rectangle()
                 {
-                    Width = rectangles.Width,
+                    Width = 1,// rectangles.Width,
                     Height = titre.end.TotalSeconds - titre.start.TotalSeconds,
                     Fill = titre.brush,
                     Stroke = System.Windows.Media.Brushes.Black,
@@ -457,7 +468,6 @@ namespace OneTrackToXTracks_SplitterAudio
                 //Add to canvas
                 Dispatcher.Invoke(new Action(() =>
                 {
-
                     rectangles.Children.Add(rec);
                     System.Windows.Controls.Panel.SetZIndex(rec, (int)ZLevelOnCanvas.tracks);
                     Canvas.SetTop(rec, titre.start.TotalSeconds);
@@ -519,15 +529,17 @@ namespace OneTrackToXTracks_SplitterAudio
             rectangles.Height = data.totaltime;
         }
 
+        TranslateTransform st;
+        ScaleTransform sc;
         void DrawOrUpdate_SilencesPastilles()
         {
-            if (data == null) { return; }
+            if (data == null) return;
 
-            TranslateTransform st = zoomBorder._GetTranslateTransform();
-            ScaleTransform sc = zoomBorder._GetScaleTransform();
+            if (st == null) st = zoomBorder._GetTranslateTransform();
+            if (st == null) return;
 
-            if (st == null || sc == null)
-                return;
+            if (sc == null) sc = zoomBorder._GetScaleTransform();
+            if (sc == null) return;
 
             if (silences_pastille == null)
             {
@@ -536,8 +548,8 @@ namespace OneTrackToXTracks_SplitterAudio
                 {
                     Pastille pastille = new Pastille();
                     pastille.Set(silence.index.ToString("00"),
-                        stroke_color: Brushes.Black,
-                        fill_color: Brushes.White,
+                        stroke_color: System.Windows.Media.Brushes.Black,
+                        fill_color: System.Windows.Media.Brushes.White,
                         stroke_thickness: 1,
                         silence,
                         (int)ZLevelOnCanvas.pastilles - silence.index
@@ -570,6 +582,35 @@ namespace OneTrackToXTracks_SplitterAudio
                 Canvas.SetTop(pastille, top);
                 Canvas.SetLeft(pastille, left);
             }
+        }
+
+        void DrawOrUpdate_PlayCursor(double val)
+        {
+            if (data == null) return;
+
+            if (st == null) st = zoomBorder._GetTranslateTransform();
+            if (st == null) return;
+
+            if (sc == null) sc = zoomBorder._GetScaleTransform();
+            if (sc == null) return;
+
+            if (play_cursor_playing == null)
+            {
+                play_cursor_playing = new Polyline();
+                play_cursor_playing.Points.Add(new System.Windows.Point(0, val));
+                play_cursor_playing.Points.Add(new System.Windows.Point(1, val));
+                play_cursor_playing.Stroke = new SolidColorBrush(play_cursor_playing_color);
+                rectangles.Children.Add(play_cursor_playing);
+                Canvas.SetTop(play_cursor_playing, 0);
+                Canvas.SetLeft(play_cursor_playing, 0);
+                System.Windows.Controls.Panel.SetZIndex(play_cursor_playing, (int)ZLevelOnCanvas.cursor);
+            }
+            else
+            {
+                play_cursor_playing.Points[0] = new System.Windows.Point(0, val);
+                play_cursor_playing.Points[1] = new System.Windows.Point(1, val);
+            }
+            play_cursor_playing.StrokeThickness = rectangles.ActualHeight * 0.2 / 100 * 1/ sc.ScaleY;
         }
 
         void Title_selected(Title title)
@@ -644,7 +685,6 @@ namespace OneTrackToXTracks_SplitterAudio
                 System.Diagnostics.Process.Start(startInfo);
             }
         }
-
         #endregion
     }
 }

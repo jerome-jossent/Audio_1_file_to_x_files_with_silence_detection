@@ -47,8 +47,8 @@
 
                 <Label Grid.Row="1" Grid.Column="0" Content="Analyse file" HorizontalAlignment="Left"  Height="33" VerticalAlignment="Top" />
                 <StackPanel Grid.Row="1" Grid.Column="1" Margin="5"  Orientation="Horizontal" >
-                    <Button Margin="5" Click="AnalyseFileFromJSON_btn_Click" Content="Load Analyse file" ToolTip="Analyse file"/>
-                    <Button Margin="5" Click="AnalyseFile_btn_Click" Content="Analyse file" ToolTip="Analyse file"/>
+                    <Button Margin="5" IsEnabled="False" Click="AnalyseFileFromJSON_btn_Click" Content="Load Analyse file" ToolTip="Analyse file"/>
+                    <Button Margin="5" IsEnabled="False" Click="AnalyseFile_btn_Click" Content="Analyse file" ToolTip="Analyse file"/>
                 </StackPanel>
                 <ProgressBar Grid.Row="1" Grid.Column="2" Height="15" x:Name="_progressbar" Minimum="0" Maximum="100" />
 

@@ -19,6 +19,7 @@
             <RowDefinition Height="auto"/>
             <RowDefinition Height="auto"/>
             <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -116,16 +117,29 @@
               VerticalAlignment="Stretch"
               ShowsPreview="True"
               />
-        
+
         <Grid Grid.Row="2" SizeChanged="GridZoom_SizeChanged" Height="100">
-            <local2:ZoomBorder x:Name="zoomBorder" ClipToBounds="True" Background="Gray">
-                    <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox">
-                        <Canvas x:Name="rectangles" ClipToBounds="True" Height="1" Width="1"/>
-                    </Viewbox>
+            <local2:ZoomBorder x:Name="zoomBorder_H" X_fixed="False" Y_fixed="False" ClipToBounds="True" Background="Gray">
+                <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox">
+                    <Canvas x:Name="rectangles_H" ClipToBounds="True" Height="1" Width="1"/>
+                </Viewbox>
             </local2:ZoomBorder>
         </Grid>
 
-        <GridSplitter Grid.Row="3" Height="5"
+
+        <!--TEST-->
+        <!--
+        <Grid Grid.Row="3" SizeChanged="GridZoom_SizeChanged" Height="100">
+            <local2:ZoomBorder x:Name="zoomBorder2" ClipToBounds="True" Background="Gray">
+                <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox2">
+                    <Canvas x:Name="rectangles2" ClipToBounds="True" Height="1" Width="1"/>
+                </Viewbox>
+            </local2:ZoomBorder>
+        </Grid>-->
+
+
+
+        <GridSplitter Grid.Row="4" Height="5"
               HorizontalAlignment="Stretch"
               VerticalAlignment="Stretch"
               ShowsPreview="True"
@@ -133,7 +147,7 @@
 
 
         <!--Texte avec durée, pistes-->
-        <Grid Grid.Row="4" >
+        <Grid Grid.Row="5" >
             <Grid.RowDefinitions>
                 <RowDefinition Height="auto"/>
                 <RowDefinition Height="*"/>
@@ -151,21 +165,21 @@
             <TextBlock Grid.Column="0" Grid.Row="0" Text="Texte" />
             <TextBox Grid.Column="0" Grid.Row="1" x:Name="txt" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"  />
 
-            <!--<TextBlock Grid.Column="2" Grid.Row="0" Text="Peaks and Silences" />-->
-            <!--<Grid Grid.Column="2" Grid.Row="1" SizeChanged="GridZoom_SizeChanged" >
-                <local2:ZoomBorder x:Name="zoomBorder" ClipToBounds="True" Background="Gray">
-                    <Grid>
-                        <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox">
-                            <Canvas x:Name="rectangles" ClipToBounds="True" Height="1" Width="1"/>
-                        </Viewbox>
-                    </Grid>
+            <TextBlock Grid.Column="2" Grid.Row="0" Text="Peaks and Silences" />
+            
+            <Grid Grid.Column="2" Grid.Row="1" SizeChanged="GridZoom_V_SizeChanged" >
+                <local2:ZoomBorder x:Name="zoomBorder_V" X_fixed="True" Y_fixed="False" ClipToBounds="True" Background="Gray">
+                    <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox_V">
+                        <Canvas x:Name="rectangles_V" ClipToBounds="True" Height="1" Width="1"/>
+                    </Viewbox>
                 </local2:ZoomBorder>
-            </Grid>-->
-            <!--<GridSplitter Grid.Column="3" Grid.RowSpan="2"
+            </Grid>
+            
+            <GridSplitter Grid.Column="3" Grid.RowSpan="2"
               HorizontalAlignment="Stretch"
               VerticalAlignment="Stretch"
               ShowsPreview="True"
-              />-->
+              />
 
             <Menu Grid.Column="4" Grid.Row="0" >
                 <MenuItem Header="Transitions detection"/>

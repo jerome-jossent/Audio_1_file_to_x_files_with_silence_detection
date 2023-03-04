@@ -14,8 +14,10 @@ namespace PanAndZoom
         Point origin;
         Point start;
 
-        bool X_fixed = false;
-        bool Y_fixed = true;
+        public bool X_fixed { get; set; }
+        public bool Y_fixed { get; set; }
+
+
         bool hasMoved = false;
         TranslateTransform translateTransform = null;
         ScaleTransform scaleTransform = null;
@@ -88,7 +90,7 @@ namespace PanAndZoom
             }
         }
 
-        public void SetZoom(double relativeX, double aboluteZoom)
+        public void SetZoomX(double relativeX, double aboluteZoom)
         {
             if (child != null)
             {
@@ -106,14 +108,41 @@ namespace PanAndZoom
             }
         }
 
-        public void SetRange(double relativeX_start, double relativeX_end)
+        public void SetZoomY(double relativeY, double aboluteZoom)
+        {
+            if (child != null)
+            {
+                // zoom
+                var st = _GetScaleTransform(child);
+                st.ScaleY = aboluteZoom;
+
+                // pan
+                var tt = _GetTranslateTransform(child);
+                tt.Y = -relativeY * ActualHeight * aboluteZoom + ActualHeight / 2;
+
+                ZoomChangeEvent?.Invoke(this, null);
+            }
+        }
+
+        public void SetRangeX(double relativeX_start, double relativeX_end)
         {
             if (child != null)
             {
                 //vise le centre
                 double x_moy = (relativeX_start + relativeX_end) / 2;
                 double zoom = 1 / (relativeX_end - relativeX_start);
-                SetZoom(x_moy, zoom);
+                SetZoomX(x_moy, zoom);
+            }
+        }
+
+        public void SetRangeY(double relativeY_start, double relativeY_end)
+        {
+            if (child != null)
+            {
+                //vise le centre
+                double y_moy = (relativeY_start + relativeY_end) / 2;
+                double zoom = 1 / (relativeY_end - relativeY_start);
+                SetZoomX(y_moy, zoom);
             }
         }
 
@@ -171,8 +200,6 @@ namespace PanAndZoom
                 var tt = _GetTranslateTransform(child);
                 start = e.GetPosition(this);
 
-                //double X = X_fixed ? origin.X : tt.X;
-
                 origin = new Point(tt.X, tt.Y);
 
                 this.Cursor = Cursors.Hand;
@@ -201,13 +228,16 @@ namespace PanAndZoom
         }
 
         public delegate void MoveEventHandler(object sender, ZoomBorderEventArgs e);
-        public static event MoveEventHandler MoveEvent;
+        //public static event MoveEventHandler MoveEvent;
+        public event MoveEventHandler MoveEvent;
 
         public delegate void ZoomChangeEventHandler(object sender, ZoomBorderEventArgs args);
-        public static event ZoomChangeEventHandler ZoomChangeEvent;
+        //public static event ZoomChangeEventHandler ZoomChangeEvent;
+        public event ZoomChangeEventHandler ZoomChangeEvent;
 
         public delegate void MouseLeftButtonWithoutMoveEventHandler(object sender, ZoomBorderEventArgs args);
-        public static event MouseLeftButtonWithoutMoveEventHandler MouseLeftButtonWithoutMoveEvent;
+        //public static event MouseLeftButtonWithoutMoveEventHandler MouseLeftButtonWithoutMoveEvent;
+        public event MouseLeftButtonWithoutMoveEventHandler MouseLeftButtonWithoutMoveEvent;
 
         private void child_MouseMove(object sender, MouseEventArgs e)
         {
@@ -229,7 +259,8 @@ namespace PanAndZoom
                 }
                 // Point mouse2 = e.GetPosition(this);
                 //MoveEvent?.Invoke(this, new ZoomBorderEventArgs(st.ScaleY, tt.Y / ActualHeight, mouse.Y / ActualHeight));
-                MoveEvent?.Invoke(this, new ZoomBorderEventArgs(st.ScaleX, tt.X / ActualWidth, mouse.X / ActualWidth));
+                MoveEvent?.Invoke(this, new ZoomBorderEventArgs(st.ScaleX, tt.X / ActualWidth, mouse.X / ActualWidth,
+                                                                st.ScaleY, tt.Y / ActualHeight, mouse.Y / ActualHeight));
             }
         }
 
@@ -242,12 +273,19 @@ namespace PanAndZoom
         public double scaleX { get; }
         public double relativeoffsetX { get; }
         public double mouseRelativeX { get; }
+        public double scaleY { get; }
+        public double relativeoffsetY { get; }
+        public double mouseRelativeY { get; }
 
-        public ZoomBorderEventArgs(double scale, double offset, double mouse)
+        public ZoomBorderEventArgs(double scaleX, double offsetX, double mouseX, double scaleY, double offsetY, double mouseY)
         {
-            this.scaleX = scale;
-            this.relativeoffsetX = offset;
-            this.mouseRelativeX = mouse;
+            this.scaleX = scaleX;
+            this.relativeoffsetX = offsetX;
+            this.mouseRelativeX = mouseX;  
+            
+            this.scaleY = scaleY;
+            this.relativeoffsetY = offsetY;
+            this.mouseRelativeY = mouseY;
         }
     }
 }

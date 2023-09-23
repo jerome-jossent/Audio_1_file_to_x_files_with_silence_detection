@@ -12,16 +12,9 @@ using System.Windows.Shapes;
 
 using PanAndZoom;
 using NAudio_JJ;
-using System.Reflection;
 using System.Diagnostics;
-using System.Threading;
 using TagLib;
-using System.Xml.Linq;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Windows.Threading;
-using NAudio.Wave;
-using System.Drawing;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace OneTrackToXTracks_SplitterAudio
 {
@@ -57,7 +50,7 @@ namespace OneTrackToXTracks_SplitterAudio
         Polyline play_cursor_playing_H, play_cursor_playing_V;
         System.Windows.Media.Color play_cursor_playing_color = System.Windows.Media.Colors.White;
 
-        double current_time;
+        double current_time, current_playing_time;
 
         public enum ZLevelOnCanvas { tracks = 0, peaks = 3, silences = 5, pastilles = 1000, cursor = 2000 }
 
@@ -180,8 +173,8 @@ namespace OneTrackToXTracks_SplitterAudio
         void ZoomBorder_MoveEvent(object sender, PanAndZoom.ZoomBorderEventArgs e)
         {
             if (data == null) return;
-            double y_relative = (e.mouseRelativeX - e.relativeoffsetX) / e.scaleX;
-            current_time = y_relative * data.totaltime;
+            double x_relative = (e.mouseRelativeX - e.relativeoffsetX) / e.scaleX;
+            current_time = x_relative * data.totaltime;
             TimeSpan t = TimeSpan.FromSeconds(current_time);
             string titre = _Title + " - " + t.ToString("G");
             Dispatcher.BeginInvoke(() => (Title = titre));
@@ -193,13 +186,19 @@ namespace OneTrackToXTracks_SplitterAudio
             UpdateCursorThickness();
         }
 
-        void ZoomBorder_MouseLeftButtonWithoutMoveEvent(object sender, ZoomBorderEventArgs args)
+        void ZoomBorder_MouseLeftButtonWithoutMoveEvent(object sender, ZoomBorderEventArgs e)
         {
+            if(e==null) return;
+            double x_relative = (e.mouseRelativeX - e.relativeoffsetX) / e.scaleX;
+            current_playing_time = x_relative * data.totaltime;
             if (NAudio_JJ.NAudio_JJ.isPlaying)
                 PlayAudioHere();
             else
-                DrawOrUpdate_PlayCursor_H(current_time);
+                DrawOrUpdate_PlayCursor_H(current_playing_time);
         }
+
+
+
 
         void GridZoom_SizeChanged(object sender, SizeChangedEventArgs e)
         {
@@ -227,12 +226,15 @@ namespace OneTrackToXTracks_SplitterAudio
             UpdateCursorThickness_V();
         }
 
-        void ZoomBorder_V_MouseLeftButtonWithoutMoveEvent(object sender, ZoomBorderEventArgs args)
+        void ZoomBorder_V_MouseLeftButtonWithoutMoveEvent(object sender, ZoomBorderEventArgs e)
         {
+            if (e == null) return;
+            double y_relative = (e.mouseRelativeY - e.relativeoffsetY) / e.scaleY;
+            current_playing_time = y_relative * data.totaltime;
             if (NAudio_JJ.NAudio_JJ.isPlaying)
                 PlayAudioHere();
             else
-                DrawOrUpdate_PlayCursor_V(current_time);
+                DrawOrUpdate_PlayCursor_V(current_playing_time);
         }
         private void GridZoom_V_SizeChanged(object sender, SizeChangedEventArgs e)
         {
@@ -262,19 +264,19 @@ namespace OneTrackToXTracks_SplitterAudio
         }
 
 
-        private void AudioPlayer_PLAY_Click(object sender, RoutedEventArgs e)
+        void AudioPlayer_PLAY_Click(object sender, RoutedEventArgs e)
         {
             PlayAudioHere();
         }
 
-        private void AudioPlayer_PAUSE_Click(object sender, RoutedEventArgs e)
+        void AudioPlayer_PAUSE_Click(object sender, RoutedEventArgs e)
         {
             NAudio_JJ.NAudio_JJ.AudioPlayer_Pause();
-
         }
 
         void AudioPlayer_STOP_Click(object sender, RoutedEventArgs e)
         {
+            NAudio_JJ.NAudio_JJ.playerPlayingEvent -= NAudio_JJ_playerPlayingEvent; ;
             NAudio_JJ.NAudio_JJ.AudioPlayer_Stop();
         }
 
@@ -333,14 +335,14 @@ namespace OneTrackToXTracks_SplitterAudio
 
             //TRIM data
             //silences 1 et n
-            if (silences[0].debut == TimeSpan.Zero.TotalSeconds)
+            if (silences.Count>0 && silences[0].debut == TimeSpan.Zero.TotalSeconds)
             {
                 //change piste 1
                 titles[0].start = TimeSpan.FromSeconds((double)silences[0].fin);
                 //delete silence 1
                 silences.RemoveAt(0);
             }
-            if (titles.Count > 1 && (double)silences[silences.Count - 1].fin >= totaltime_sec)
+            if (silences.Count > 0 && titles.Count > 1 && (double)silences[silences.Count - 1].fin >= totaltime_sec)
             {
                 //change piste n
                 titles[titles.Count - 1].end = TimeSpan.FromSeconds(silences[silences.Count - 1].debut);
@@ -356,12 +358,12 @@ namespace OneTrackToXTracks_SplitterAudio
         void PlayAudioHere()
         {
             NAudio_JJ.NAudio_JJ.playerPlayingEvent += NAudio_JJ_playerPlayingEvent; ;
-            NAudio_JJ.NAudio_JJ.AudioPlayer_Play(file.Text, current_time, data.totaltime);
+            NAudio_JJ.NAudio_JJ.AudioPlayer_Play(file.Text, current_playing_time, data.totaltime);
         }
 
         private void NAudio_JJ_playerPlayingEvent(object sender, NAudio_JJ.NAudio_JJ.PlayerPlayingEventArgs e)
         {
-            current_time = e.Val;
+            current_playing_time = e.Val;
             try
             {
                 Dispatcher.Invoke(() =>

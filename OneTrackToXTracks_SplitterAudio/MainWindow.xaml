@@ -119,7 +119,7 @@
               />
 
         <Grid Grid.Row="2" SizeChanged="GridZoom_SizeChanged" Height="100">
-            <local2:ZoomBorder x:Name="zoomBorder_H" X_fixed="False" Y_fixed="False" ClipToBounds="True" Background="Gray">
+            <local2:ZoomBorder x:Name="zoomBorder_H" X_fixed="False" Y_fixed="True" ClipToBounds="True" Background="Gray">
                 <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox">
                     <Canvas x:Name="rectangles_H" ClipToBounds="True" Height="1" Width="1"/>
                 </Viewbox>
@@ -128,13 +128,24 @@
 
 
         <!--TEST-->
-        <!--
-        <Grid Grid.Row="3" SizeChanged="GridZoom_SizeChanged" Height="100">
-            <local2:ZoomBorder x:Name="zoomBorder2" ClipToBounds="True" Background="Gray">
-                <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox2">
-                    <Canvas x:Name="rectangles2" ClipToBounds="True" Height="1" Width="1"/>
-                </Viewbox>
-            </local2:ZoomBorder>
+        
+        <!--<Grid Grid.Row="3" SizeChanged="GridZoom_SizeChanged" Height="100">
+            --><!--ROTATED--><!--
+            <Grid>
+                <Grid.RenderTransformOrigin>
+                    <Point X="0.5" Y="0.5"/>
+                </Grid.RenderTransformOrigin>
+
+                <Grid.RenderTransform>
+                    <RotateTransform Angle="-90"/>
+                </Grid.RenderTransform>
+
+                <local2:ZoomBorder x:Name="zoomBorder_V" X_fixed="True" Y_fixed="False" ClipToBounds="True" Background="Gray" Margin="697,-693,704,-694">
+                    <Viewbox Stretch="Fill" ClipToBounds="True" x:Name="rectangles_viewbox_V">
+                        <Canvas x:Name="rectangles_V" ClipToBounds="True" Height="29" Width="1"/>
+                    </Viewbox>
+                </local2:ZoomBorder>
+            </Grid>
         </Grid>-->
 
 

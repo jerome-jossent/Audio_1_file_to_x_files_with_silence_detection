@@ -1,5 +1,8 @@
 ﻿using Microsoft.VisualBasic.Devices;
+using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -217,7 +220,11 @@ namespace PanAndZoom
 
                 if (!hasMoved)
                 {
-                    MouseLeftButtonWithoutMoveEvent?.Invoke(this, null);
+                    var st = _GetScaleTransform(child);
+                    var tt = _GetTranslateTransform(child);
+                    Point mouse = e.GetPosition(this);
+                    MouseLeftButtonWithoutMoveEvent?.Invoke(this, new ZoomBorderEventArgs(st.ScaleX, tt.X / ActualWidth, mouse.X / ActualWidth,
+                                                                st.ScaleY, tt.Y / ActualHeight, mouse.Y / ActualHeight));
                 }
             }
         }
@@ -239,11 +246,19 @@ namespace PanAndZoom
         //public static event MouseLeftButtonWithoutMoveEventHandler MouseLeftButtonWithoutMoveEvent;
         public event MouseLeftButtonWithoutMoveEventHandler MouseLeftButtonWithoutMoveEvent;
 
+        Point mouseLast;
+
+        static int eventcount;
+
         private void child_MouseMove(object sender, MouseEventArgs e)
         {
             if (child != null)
             {
                 Point mouse = e.GetPosition(this);
+                if (mouse== mouseLast)
+                    return;
+
+                mouseLast = mouse;
                 var st = _GetScaleTransform(child);
                 var tt = _GetTranslateTransform(child);
                 if (child.IsMouseCaptured)
@@ -257,8 +272,6 @@ namespace PanAndZoom
 
                     hasMoved = true;
                 }
-                // Point mouse2 = e.GetPosition(this);
-                //MoveEvent?.Invoke(this, new ZoomBorderEventArgs(st.ScaleY, tt.Y / ActualHeight, mouse.Y / ActualHeight));
                 MoveEvent?.Invoke(this, new ZoomBorderEventArgs(st.ScaleX, tt.X / ActualWidth, mouse.X / ActualWidth,
                                                                 st.ScaleY, tt.Y / ActualHeight, mouse.Y / ActualHeight));
             }
@@ -281,8 +294,8 @@ namespace PanAndZoom
         {
             this.scaleX = scaleX;
             this.relativeoffsetX = offsetX;
-            this.mouseRelativeX = mouseX;  
-            
+            this.mouseRelativeX = mouseX;
+
             this.scaleY = scaleY;
             this.relativeoffsetY = offsetY;
             this.mouseRelativeY = mouseY;

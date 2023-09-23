@@ -1,21 +1,11 @@
 ﻿using NAudio.Utils;
 using NAudio.Wave;
 using NAudio.WaveFormRenderer;
-using OneTrackToXTracks_SplitterAudio;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Numerics;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Timers;
-using System.Windows.Controls;
-using TagLib;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace NAudio_JJ
 {
@@ -63,7 +53,7 @@ namespace NAudio_JJ
 
             int iterrations = (int)(samples / samplessize);
             double pas = waveReader.TotalTime.TotalSeconds / iterrations;
-            double tps = pas / 2;
+            double tps = 0;// pas / 2;
             double amplitude;
             int p_last = 0;
             int p;
@@ -189,7 +179,7 @@ namespace NAudio_JJ
                 else
                 {
                     newSilence = true;
-                    if (silences[silences.Count - 1].fin == null)
+                    if (silences.Count > 0 && silences[silences.Count - 1].fin == null)
                         silences.RemoveAt(silences.Count - 1);
                 }
             }
@@ -219,7 +209,8 @@ namespace NAudio_JJ
         {
             if (!System.IO.File.Exists(path)) return 0;
             TimeSpan time;
-            using (Mp3FileReader reader = new Mp3FileReader(path))
+            //using (Mp3FileReader reader = new Mp3FileReader(path))
+            using (MediaFoundationReader reader = new MediaFoundationReader(path))
                 time = reader.TotalTime;
             return time.TotalSeconds;
         }
@@ -254,7 +245,8 @@ namespace NAudio_JJ
 
 
         static WaveOut audioPlayer;
-        static System.Timers.Timer audioPlayerTimer;
+        //static System.Timers.Timer audioPlayerTimer;
+        static Thread threadCursorPositionUpdate;
         static DateTime endtime;
         static double _start_secondes;
         internal static bool isPlaying;
@@ -280,14 +272,20 @@ namespace NAudio_JJ
 
             endtime = DateTime.Now + TimeSpan.FromSeconds(secToWait);
             _start_secondes = start_secondes;
-            audioPlayerTimer = new System.Timers.Timer(100);
-            audioPlayerTimer.Enabled = true;
-            audioPlayerTimer.Elapsed += new System.Timers.ElapsedEventHandler(OnDummyTimerFired);
-            audioPlayerTimer.AutoReset = true;
+            //// audioPlayerTimer = new System.Timers.Timer(100);
+            ////  audioPlayerTimer.Enabled = true;
+            ////  audioPlayerTimer.Elapsed += new System.Timers.ElapsedEventHandler(OnDummyTimerFired);
+            //// audioPlayerTimer.AutoReset = true;
+
+
+//   stop threadCursorPositionUpdate
+
+            threadCursorPositionUpdate = new Thread(eeee);
+            threadCursorPositionUpdate.Start();
 
             isPlaying = true;
             audioPlayer.Play();
-            audioPlayerTimer.Start();
+            ////audioPlayerTimer.Start();
         }
 
         public delegate void PlayerPlayingHandler(object sender, PlayerPlayingEventArgs e);
@@ -299,18 +297,36 @@ namespace NAudio_JJ
             public double Val { get; }
         }
 
+        static void eeee()
+        {
+            //            threadCursorPositionUpdate
+
+
+            while (DateTime.Now < endtime)
+            {
+                double val = 0;
+                try
+                {
+                    val = audioPlayer.GetPositionTimeSpan().TotalSeconds + _start_secondes;
+                }
+                catch (Exception ex)
+                {
+                    //throw;
+                }
+
+                playerPlayingEvent?.Invoke(null, new PlayerPlayingEventArgs(val));
+                Thread.Sleep(100);
+            }
+            audioPlayer.Stop();
+
+        }
+
         private static void OnDummyTimerFired(object? sender, ElapsedEventArgs e)
         {
             if (DateTime.Now >= endtime)
             {
                 audioPlayer.Stop();
-                audioPlayerTimer.Elapsed -= new System.Timers.ElapsedEventHandler(OnDummyTimerFired);
-
-                //désabonnement forcé des abonnés
-                foreach (var abonne in playerPlayingEvent.GetInvocationList())
-                {
-                    string bob = abonne.Target.ToString();
-                }
+                //// audioPlayerTimer.Elapsed -= new System.Timers.ElapsedEventHandler(OnDummyTimerFired);
             }
 
             double val = 0;
